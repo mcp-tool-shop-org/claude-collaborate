@@ -1,0 +1,87 @@
+# Claude Collaborate
+
+> Where Human Creativity Meets AI Intelligence — A unified sandbox for real-time human-AI collaboration
+
+## Overview
+
+Claude Collaborate is a unified sandbox environment for real-time human-AI collaboration. It brings together interactive workspaces, seamless communication, and creative tools in one interface — whiteboard, code editor, chess, and more.
+
+## Quick Start
+
+```bash
+git clone https://github.com/mcp-tool-shop/claude-collaborate.git
+cd claude-collaborate
+pip install aiohttp
+python server.py
+
+# Open http://localhost:8877
+```
+
+## Environments
+
+| Environment | Description |
+|-------------|-------------|
+| **Whiteboard** | Draw, sketch, and brainstorm visually |
+| **Code Workshop** | HTML/CSS/JS editor with live preview |
+| **Chess Workshop** | Strategy and tactics playground |
+| **Capture Viewer** | Screenshots and recordings viewer |
+| **GitHub Toolkit** | README and marketing generators |
+| **Creative Lab** | Interactive experiments |
+| **Template** | Starter for creating new environments |
+
+## Architecture
+
+```
+claude-collaborate/
+├── index.html           # Main UI with environment switcher
+├── server.py            # aiohttp server
+├── ws_bridge.py         # WebSocket bridge for Claude Code
+├── whiteboard.html      # Drawing and brainstorming
+├── code-playground.html # Live HTML/CSS/JS editor
+├── chess.html           # Chess analysis board
+├── capture-viewer.html  # Screenshot/recording viewer
+├── github-toolkit.html  # README and marketing tools
+└── adventures/          # Creative Lab experiments
+```
+
+## WebSocket Protocol
+
+Real-time communication between browser and Claude Code:
+
+```javascript
+// Browser sends to Claude
+{ "type": "user_message", "content": "Hello!" }
+
+// Claude responds
+{ "type": "claude_response", "content": "Hi there!" }
+
+// Connection status
+{ "type": "connected", "message": "Connected to Claude Collaborate Bridge" }
+```
+
+## Server API
+
+### GET /
+Main UI with environment switcher.
+
+### GET /whiteboard
+Interactive drawing canvas.
+
+### GET /code
+Live HTML/CSS/JS editor with preview.
+
+### GET /chess
+Chess board for strategy discussion.
+
+### WebSocket /ws
+Real-time bidirectional communication.
+
+## Links
+
+- Repository: https://github.com/mcp-tool-shop/claude-collaborate
+- Documentation: https://github.com/mcp-tool-shop/claude-collaborate#readme
+- Issues: https://github.com/mcp-tool-shop/claude-collaborate/issues
+
+## License
+
+MIT License
