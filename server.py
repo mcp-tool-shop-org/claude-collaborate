@@ -1,0 +1,282 @@
+"""
+Claude Collaborate - Real-time collaboration server.
+
+A unified sandbox environment for human-AI collaboration with WebSocket bridge.
+
+Usage:
+    python server.py
+
+Then open http://localhost:8877 in your browser.
+"""
+
+import asyncio
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Set
+
+from aiohttp import web, WSMsgType
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+PORT = 8877
+DIRECTORY = Path(__file__).parent
+
+# WebSocket state
+connected_ws_clients: Set[web.WebSocketResponse] = set()
+MESSAGE_FILE = DIRECTORY / "messages.jsonl"
+RESPONSE_FILE = DIRECTORY / "claude_responses.jsonl"
+
+
+async def index_handler(request: web.Request) -> web.Response:
+    """Serve main Claude Collaborate UI."""
+    return web.FileResponse(DIRECTORY / "index.html")
+
+
+async def static_handler(request: web.Request) -> web.Response:
+    """Serve static files."""
+    filename = request.match_info.get('filename', '')
+
+    # Security: prevent directory traversal
+    if '..' in filename or filename.startswith('/'):
+        return web.Response(text="Forbidden", status=403)
+
+    file_path = DIRECTORY / filename
+    if file_path.exists() and file_path.is_file():
+        return web.FileResponse(file_path)
+
+    return web.Response(text="Not Found", status=404)
+
+
+async def adventures_handler(request: web.Request) -> web.Response:
+    """Serve Creative Lab."""
+    adventures_path = DIRECTORY / "adventures" / "index.html"
+    if adventures_path.exists():
+        return web.FileResponse(adventures_path)
+    return web.Response(text="Creative Lab not found", status=404)
+
+
+async def adventures_static_handler(request: web.Request) -> web.Response:
+    """Serve Creative Lab static files."""
+    filename = request.match_info.get('filename', '')
+    if '..' in filename or filename.startswith('/'):
+        return web.Response(text="Forbidden", status=403)
+
+    file_path = DIRECTORY / "adventures" / filename
+    if file_path.exists() and file_path.is_file():
+        return web.FileResponse(file_path)
+
+    return web.Response(text="Not Found", status=404)
+
+
+async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
+    """Handle WebSocket connections for real-time Claude communication."""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    connected_ws_clients.add(ws)
+    logger.info(f"WebSocket client connected. Total: {len(connected_ws_clients)}")
+
+    # Send welcome message
+    await ws.send_json({
+        "type": "connected",
+        "message": "Connected to Claude Collaborate Bridge",
+        "timestamp": datetime.now().isoformat()
+    })
+
+    try:
+        async for msg in ws:
+            if msg.type == WSMsgType.TEXT:
+                await handle_ws_message(ws, msg.data)
+            elif msg.type == WSMsgType.ERROR:
+                logger.error(f"WebSocket error: {ws.exception()}")
+    finally:
+        connected_ws_clients.discard(ws)
+        logger.info(f"WebSocket client disconnected. Total: {len(connected_ws_clients)}")
+
+    return ws
+
+
+async def handle_ws_message(ws: web.WebSocketResponse, data: str):
+    """Process incoming WebSocket message."""
+    try:
+        message = json.loads(data)
+        msg_type = message.get("type", "")
+
+        if msg_type == "user_message":
+            content = message.get("content", "")
+            logger.info(f"User message: {content[:100]}...")
+
+            # Store message for Claude Code to read
+            MESSAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(MESSAGE_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps({
+                    "timestamp": datetime.now().isoformat(),
+                    "content": content,
+                    "type": "user_message"
+                }) + "\n")
+
+            # Acknowledge receipt
+            await ws.send_json({
+                "type": "message_received",
+                "timestamp": datetime.now().isoformat()
+            })
+
+        elif msg_type == "ping":
+            await ws.send_json({"type": "pong"})
+
+    except json.JSONDecodeError:
+        logger.warning(f"Invalid JSON received: {data[:100]}")
+    except Exception as e:
+        logger.error(f"Error handling WebSocket message: {e}")
+
+
+async def broadcast_to_ws_clients(message: dict):
+    """Broadcast message to all connected WebSocket clients."""
+    if not connected_ws_clients:
+        return
+
+    disconnected = set()
+    for ws in connected_ws_clients:
+        try:
+            await ws.send_json(message)
+        except Exception:
+            disconnected.add(ws)
+
+    connected_ws_clients.difference_update(disconnected)
+
+
+async def ws_respond_handler(request: web.Request) -> web.Response:
+    """HTTP endpoint for Claude Code to send responses to browser."""
+    try:
+        data = await request.json()
+        content = data.get("content", "")
+
+        if not content:
+            return web.json_response({"error": "No content provided"}, status=400)
+
+        # Broadcast to all connected clients
+        await broadcast_to_ws_clients({
+            "type": "claude_response",
+            "content": content,
+            "timestamp": datetime.now().isoformat()
+        })
+
+        # Store response
+        with open(RESPONSE_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "timestamp": datetime.now().isoformat(),
+                "content": content
+            }) + "\n")
+
+        return web.json_response({
+            "status": "sent",
+            "clients": len(connected_ws_clients)
+        })
+
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+
+async def ws_messages_handler(request: web.Request) -> web.Response:
+    """HTTP endpoint for Claude Code to read pending messages."""
+    messages = []
+
+    if MESSAGE_FILE.exists():
+        with open(MESSAGE_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        messages.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+
+        # Clear file after reading
+        MESSAGE_FILE.write_text("")
+
+    return web.json_response({
+        "messages": messages,
+        "count": len(messages)
+    })
+
+
+async def ws_status_handler(request: web.Request) -> web.Response:
+    """WebSocket bridge status."""
+    return web.json_response({
+        "connected_clients": len(connected_ws_clients),
+        "status": "active" if connected_ws_clients else "idle",
+        "timestamp": datetime.now().isoformat()
+    })
+
+
+async def health_handler(request: web.Request) -> web.Response:
+    """Health check endpoint."""
+    return web.json_response({
+        "status": "healthy",
+        "service": "claude-collaborate",
+        "timestamp": datetime.now().isoformat()
+    })
+
+
+@web.middleware
+async def cors_middleware(request: web.Request, handler):
+    """Add CORS headers to all responses."""
+    if request.method == "OPTIONS":
+        response = web.Response()
+    else:
+        response = await handler(request)
+
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+def create_app() -> web.Application:
+    """Create and configure the application."""
+    app = web.Application(middlewares=[cors_middleware])
+
+    # Routes
+    app.router.add_get("/", index_handler)
+    app.router.add_get("/health", health_handler)
+    app.router.add_get("/ws", websocket_handler)
+    app.router.add_get("/adventures", adventures_handler)
+    app.router.add_get("/adventures/{filename:.*}", adventures_static_handler)
+    app.router.add_post("/api/ws/respond", ws_respond_handler)
+    app.router.add_get("/api/ws/messages", ws_messages_handler)
+    app.router.add_get("/api/ws/status", ws_status_handler)
+    app.router.add_get("/{filename:.*}", static_handler)
+
+    return app
+
+
+def main():
+    """Run the server."""
+    print()
+    print("=" * 60)
+    print("  Claude Collaborate")
+    print("  Where Human Creativity Meets AI Intelligence")
+    print("=" * 60)
+    print()
+    print(f"  Main UI:        http://localhost:{PORT}")
+    print(f"  WebSocket:      ws://localhost:{PORT}/ws")
+    print(f"  Creative Lab:   http://localhost:{PORT}/adventures")
+    print()
+    print("  API Endpoints:")
+    print(f"    GET  /api/ws/messages  - Read pending messages")
+    print(f"    POST /api/ws/respond   - Send response to browser")
+    print(f"    GET  /api/ws/status    - Bridge status")
+    print()
+    print("  Press Ctrl+C to stop")
+    print("=" * 60)
+    print()
+
+    app = create_app()
+    web.run_app(app, host="0.0.0.0", port=PORT, print=None)
+
+
+if __name__ == "__main__":
+    main()
