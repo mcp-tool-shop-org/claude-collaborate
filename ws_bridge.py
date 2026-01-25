@@ -13,7 +13,6 @@ Then in Claude Collaborate, connect to ws://localhost:8878
 
 import asyncio
 import json
-import os
 from datetime import datetime
 from pathlib import Path
 from aiohttp import web
@@ -23,12 +22,45 @@ import aiohttp
 WS_PORT = 8878
 MESSAGE_FILE = Path(__file__).parent / "messages.jsonl"
 CLAUDE_RESPONSE_FILE = Path(__file__).parent / "claude_responses.jsonl"
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB rotation threshold
 
 # Connected WebSocket clients
 connected_clients = set()
 
-# Message queue for Claude to read
-message_queue = []
+# File I/O locks to prevent race conditions on read+clear operations
+_message_file_lock = asyncio.Lock()
+_response_file_lock = asyncio.Lock()
+
+
+def _rotate_file_if_needed(file_path: Path) -> None:
+    """Rotate file if it exceeds MAX_FILE_SIZE_BYTES.
+
+    Rotation scheme: file.jsonl -> file.jsonl.1 -> file.jsonl.2 (deleted)
+    """
+    if not file_path.exists():
+        return
+
+    try:
+        size = file_path.stat().st_size
+        if size < MAX_FILE_SIZE_BYTES:
+            return
+
+        # Rotate: delete .2, rename .1 to .2, rename current to .1
+        backup_2 = file_path.with_suffix(file_path.suffix + ".2")
+        backup_1 = file_path.with_suffix(file_path.suffix + ".1")
+
+        if backup_2.exists():
+            backup_2.unlink()
+        if backup_1.exists():
+            backup_1.rename(backup_2)
+
+        file_path.rename(backup_1)
+        # Create fresh empty file
+        file_path.touch()
+
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Rotated {file_path.name} (was {size:,} bytes)")
+    except OSError as e:
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] File rotation error: {e}")
 
 
 async def websocket_handler(request):
@@ -77,12 +109,11 @@ async def handle_message(ws, data):
             "source": "claude_collaborate"
         }
 
-        # Append to message file for Claude Code to read
-        with open(MESSAGE_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(message) + "\n")
-
-        # Also store in memory queue
-        message_queue.append(message)
+        # Append to message file for Claude Code to read (with lock)
+        async with _message_file_lock:
+            _rotate_file_if_needed(MESSAGE_FILE)
+            with open(MESSAGE_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(message) + "\n")
 
         # Acknowledge receipt
         await ws.send_json({
@@ -109,16 +140,17 @@ async def handle_message(ws, data):
 async def get_claude_responses():
     """Read Claude responses from file."""
     responses = []
-    if CLAUDE_RESPONSE_FILE.exists():
-        try:
-            with open(CLAUDE_RESPONSE_FILE, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
-                        responses.append(json.loads(line))
-            # Clear the file after reading
-            CLAUDE_RESPONSE_FILE.write_text("")
-        except Exception as e:
-            print(f"Error reading responses: {e}")
+    async with _response_file_lock:
+        if CLAUDE_RESPONSE_FILE.exists():
+            try:
+                with open(CLAUDE_RESPONSE_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip():
+                            responses.append(json.loads(line))
+                # Clear the file after reading
+                CLAUDE_RESPONSE_FILE.write_text("")
+            except Exception as e:
+                print(f"Error reading responses: {e}")
     return responses
 
 
@@ -145,9 +177,11 @@ async def post_response(request):
         # Broadcast to all connected browser clients
         await broadcast_to_clients(message)
 
-        # Also save to file as backup
-        with open(CLAUDE_RESPONSE_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(message) + "\n")
+        # Also save to file as backup (with lock and rotation)
+        async with _response_file_lock:
+            _rotate_file_if_needed(CLAUDE_RESPONSE_FILE)
+            with open(CLAUDE_RESPONSE_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(message) + "\n")
 
         return web.json_response({"status": "sent", "clients": len(connected_clients)})
     except Exception as e:
@@ -157,16 +191,17 @@ async def post_response(request):
 async def get_messages(request):
     """Endpoint for Claude Code to read user messages."""
     messages = []
-    if MESSAGE_FILE.exists():
-        try:
-            with open(MESSAGE_FILE, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
-                        messages.append(json.loads(line))
-            # Clear the file after reading
-            MESSAGE_FILE.write_text("")
-        except Exception as e:
-            return web.json_response({"status": "error", "message": str(e)}, status=500)
+    async with _message_file_lock:
+        if MESSAGE_FILE.exists():
+            try:
+                with open(MESSAGE_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip():
+                            messages.append(json.loads(line))
+                # Clear the file after reading
+                MESSAGE_FILE.write_text("")
+            except Exception as e:
+                return web.json_response({"status": "error", "message": str(e)}, status=500)
 
     return web.json_response({"messages": messages, "count": len(messages)})
 
