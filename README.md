@@ -23,7 +23,7 @@ All in one place. All beautifully integrated.
 
 ```bash
 # Clone the repository
-git clone https://github.com/mcp-tool-shop/claude-collaborate.git
+git clone https://github.com/mcp-tool-shop-org/claude-collaborate.git
 cd claude-collaborate
 
 # Install dependencies
@@ -108,7 +108,7 @@ curl -X POST http://localhost:8877/api/ws/respond \
 
 ## 🎭 Optional: Voice Integration
 
-Claude Collaborate works beautifully with [Voice Soundboard](https://github.com/mcp-tool-shop/voice-soundboard) for TTS:
+Claude Collaborate works beautifully with [Voice Soundboard](https://github.com/mcp-tool-shop-org/voice-soundboard) for TTS:
 
 ```bash
 # In another terminal, start Voice Soundboard
@@ -162,5 +162,5 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 <p align="center">
   <i>Built with ❤️ for the future of collaboration</i><br>
-  <a href="https://github.com/mcp-tool-shop">MCP Tool Shop</a>
+  <a href="https://github.com/mcp-tool-shop-org">MCP Tool Shop</a>
 </p>

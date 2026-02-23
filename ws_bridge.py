@@ -15,8 +15,9 @@ import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
-from aiohttp import web
+
 import aiohttp
+from aiohttp import web
 
 # Configuration
 WS_PORT = 8878
@@ -58,7 +59,8 @@ def _rotate_file_if_needed(file_path: Path) -> None:
         # Create fresh empty file
         file_path.touch()
 
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Rotated {file_path.name} (was {size:,} bytes)")
+        ts = datetime.now().strftime('%H:%M:%S')
+        print(f"[{ts}] Rotated {file_path.name} (was {size:,} bytes)")
     except OSError as e:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] File rotation error: {e}")
 
@@ -69,7 +71,8 @@ async def websocket_handler(request):
     await ws.prepare(request)
 
     connected_clients.add(ws)
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Client connected. Total: {len(connected_clients)}")
+    ts = datetime.now().strftime('%H:%M:%S')
+    print(f"[{ts}] Client connected. Total: {len(connected_clients)}")
 
     # Send welcome message
     await ws.send_json({
@@ -90,7 +93,8 @@ async def websocket_handler(request):
                 print(f"WebSocket error: {ws.exception()}")
     finally:
         connected_clients.discard(ws)
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Client disconnected. Total: {len(connected_clients)}")
+        ts = datetime.now().strftime('%H:%M:%S')
+        print(f"[{ts}] Client disconnected. Total: {len(connected_clients)}")
 
     return ws
 
@@ -143,7 +147,7 @@ async def get_claude_responses():
     async with _response_file_lock:
         if CLAUDE_RESPONSE_FILE.exists():
             try:
-                with open(CLAUDE_RESPONSE_FILE, "r", encoding="utf-8") as f:
+                with open(CLAUDE_RESPONSE_FILE, encoding="utf-8") as f:
                     for line in f:
                         if line.strip():
                             responses.append(json.loads(line))
@@ -194,7 +198,7 @@ async def get_messages(request):
     async with _message_file_lock:
         if MESSAGE_FILE.exists():
             try:
-                with open(MESSAGE_FILE, "r", encoding="utf-8") as f:
+                with open(MESSAGE_FILE, encoding="utf-8") as f:
                     for line in f:
                         if line.strip():
                             messages.append(json.loads(line))

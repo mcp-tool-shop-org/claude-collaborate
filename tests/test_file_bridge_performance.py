@@ -8,7 +8,6 @@ import pytest
 
 import ws_bridge
 
-
 # =============================================================================
 # P0: File rotation tests
 # =============================================================================
@@ -134,7 +133,6 @@ async def test_concurrent_response_reads_use_lock(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(ws_bridge, "CLAUDE_RESPONSE_FILE", resp_file)
 
     lock_acquired_count = {"n": 0}
-    original_lock = ws_bridge._response_file_lock
 
     class CountingLock:
         def __init__(self, lock):

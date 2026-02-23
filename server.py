@@ -9,34 +9,36 @@ Usage:
 Then open http://localhost:8877 in your browser.
 """
 
-import asyncio
+from __future__ import annotations
+
+import contextlib
 import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Set
 
-from aiohttp import web, WSMsgType
+from aiohttp import WSMsgType, web
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 PORT = 8877
 DIRECTORY = Path(__file__).parent
 
 # WebSocket state
-connected_ws_clients: Set[web.WebSocketResponse] = set()
+connected_ws_clients: set[web.WebSocketResponse] = set()
 MESSAGE_FILE = DIRECTORY / "messages.jsonl"
 RESPONSE_FILE = DIRECTORY / "claude_responses.jsonl"
 
 
-async def index_handler(request: web.Request) -> web.Response:
+async def index_handler(request: web.Request) -> web.StreamResponse:
     """Serve main Claude Collaborate UI."""
     return web.FileResponse(DIRECTORY / "index.html")
 
 
-async def static_handler(request: web.Request) -> web.Response:
+async def static_handler(request: web.Request) -> web.StreamResponse:
     """Serve static files."""
     filename = request.match_info.get('filename', '')
 
@@ -51,7 +53,7 @@ async def static_handler(request: web.Request) -> web.Response:
     return web.Response(text="Not Found", status=404)
 
 
-async def adventures_handler(request: web.Request) -> web.Response:
+async def adventures_handler(request: web.Request) -> web.StreamResponse:
     """Serve Creative Lab."""
     adventures_path = DIRECTORY / "adventures" / "index.html"
     if adventures_path.exists():
@@ -59,7 +61,7 @@ async def adventures_handler(request: web.Request) -> web.Response:
     return web.Response(text="Creative Lab not found", status=404)
 
 
-async def adventures_static_handler(request: web.Request) -> web.Response:
+async def adventures_static_handler(request: web.Request) -> web.StreamResponse:
     """Serve Creative Lab static files."""
     filename = request.match_info.get('filename', '')
     if '..' in filename or filename.startswith('/'):
@@ -186,13 +188,11 @@ async def ws_messages_handler(request: web.Request) -> web.Response:
     messages = []
 
     if MESSAGE_FILE.exists():
-        with open(MESSAGE_FILE, "r", encoding="utf-8") as f:
+        with open(MESSAGE_FILE, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
-                    try:
+                    with contextlib.suppress(json.JSONDecodeError):
                         messages.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        pass
 
         # Clear file after reading
         MESSAGE_FILE.write_text("")
@@ -266,9 +266,9 @@ def main():
     print(f"  Creative Lab:   http://localhost:{PORT}/adventures")
     print()
     print("  API Endpoints:")
-    print(f"    GET  /api/ws/messages  - Read pending messages")
-    print(f"    POST /api/ws/respond   - Send response to browser")
-    print(f"    GET  /api/ws/status    - Bridge status")
+    print("    GET  /api/ws/messages  - Read pending messages")
+    print("    POST /api/ws/respond   - Send response to browser")
+    print("    GET  /api/ws/status    - Bridge status")
     print()
     print("  Press Ctrl+C to stop")
     print("=" * 60)

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-02-23
+
+### Fixed
+- Return type annotations in `server.py` (`FileResponse` vs `Response` mismatch)
+- Unused import (`asyncio`) and f-strings without placeholders in `server.py`
+- Unused variable in test file
+- Repository URLs pointing to wrong GitHub org
+
+### Added
+- CI workflow with ruff lint, mypy type checking, and pytest (Python 3.11 + 3.12)
+- Ruff configuration (`ruff.toml`) with expanded rule set
+- pytest configuration (`pytest.ini`) for async test mode
+
+### Changed
+- Modernized type annotations (`Set` → `set` via `from __future__ import annotations`)
+- Updated `softprops/action-gh-release` from v1 to v2 in publish workflow
+
 ## [1.0.0] - 2026-01-24
 
 ### Added
@@ -31,7 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.0.1 | 2026-02-23 | CI, lint fixes, URL corrections |
 | 1.0.0 | 2026-01-24 | Initial release |
 
-[Unreleased]: https://github.com/mcp-tool-shop/claude-collaborate/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/mcp-tool-shop/claude-collaborate/releases/tag/v1.0.0
+[Unreleased]: https://github.com/mcp-tool-shop-org/claude-collaborate/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/mcp-tool-shop-org/claude-collaborate/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/mcp-tool-shop-org/claude-collaborate/releases/tag/v1.0.0
