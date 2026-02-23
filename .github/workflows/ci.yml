@@ -8,6 +8,7 @@ on:
       - "tests/**"
       - "requirements*.txt"
       - "ruff.toml"
+      - "pytest.ini"
       - ".github/workflows/**"
   pull_request:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - "tests/**"
       - "requirements*.txt"
       - "ruff.toml"
+      - "pytest.ini"
       - ".github/workflows/**"
   workflow_dispatch:
 

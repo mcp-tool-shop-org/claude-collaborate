@@ -55,14 +55,14 @@ jobs:
 
           # Create release archive
           tar -czvf dist/claude-collaborate-${VERSION}.tar.gz \
+            --exclude='*.pyc' \
+            --exclude='__pycache__' \
+            --exclude='*.jsonl' \
             *.html \
             *.py \
             adventures/ \
             README.md \
-            LICENSE \
-            --exclude='*.pyc' \
-            --exclude='__pycache__' \
-            --exclude='*.jsonl'
+            LICENSE
 
           echo "Created dist/claude-collaborate-${VERSION}.tar.gz"
           ls -la dist/
