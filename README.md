@@ -1,4 +1,6 @@
-# Claude Collaborate
+<p align="center">
+  <img src="assets/logo.png" alt="Claude Collaborate" width="280" />
+</p>
 
 > *Where Human Creativity Meets AI Intelligence*
 
