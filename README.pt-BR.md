@@ -12,22 +12,22 @@
   <a href="https://mcp-tool-shop-org.github.io/claude-collaborate/"><img src="https://img.shields.io/badge/Landing_Page-live-blue" alt="Landing Page"></a>
 </p>
 
-> *Where Human Creativity Meets AI Intelligence*
+> *Onde a criatividade humana encontra a inteligência artificial*
 
-Claude Collaborate is a unified sandbox environment for real-time human-AI collaboration. It brings together interactive workspaces, seamless communication, and creative tools in one beautiful interface.
+Claude Collaborate é um ambiente de sandbox unificado para colaboração em tempo real entre humanos e IA. Ele reúne espaços de trabalho interativos, comunicação perfeita e ferramentas criativas em uma interface elegante.
 
-## ✨ The Vision
+## ✨ A Visão
 
-Imagine a workspace where you can:
-- **Draw and brainstorm** on a shared whiteboard
-- **Write code together** with instant preview
-- **Play chess** and discuss strategy
-- **Create content** with GitHub-ready tools
-- **Communicate in real-time** via WebSocket bridge
+Imagine um espaço de trabalho onde você pode:
+- **Desenhar e fazer brainstorming** em uma lousa compartilhada
+- **Escrever código juntos** com visualização instantânea
+- **Jogar xadrez** e discutir estratégias
+- **Criar conteúdo** com ferramentas prontas para o GitHub
+- **Comunicar em tempo real** através de uma ponte WebSocket
 
-All in one place. All beautifully integrated.
+Tudo em um só lugar. Tudo perfeitamente integrado.
 
-## 🚀 Quick Start
+## 🚀 Início Rápido
 
 ```bash
 # Clone the repository
@@ -44,19 +44,19 @@ python server.py
 # http://localhost:8877
 ```
 
-## 🎨 Environments
+## 🎨 Ambientes
 
-| Environment | Description |
-|-------------|-------------|
-| **Whiteboard** | Draw, sketch, and brainstorm visually |
-| **Code Workshop** | HTML/CSS/JS editor with live preview |
-| **Chess Workshop** | Strategy and tactics playground |
-| **Capture Viewer** | Screenshots and recordings viewer |
-| **GitHub Toolkit** | README and marketing generators |
-| **Creative Lab** | Interactive experiments |
-| **Template** | Starter for creating new environments |
+| Ambiente | Descrição |
+| ------------- | ------------- |
+| **Whiteboard** | Desenhe, esboce e faça brainstorming visualmente |
+| **Code Workshop** | Editor HTML/CSS/JS com visualização em tempo real |
+| **Chess Workshop** | Ambiente para testar estratégias e táticas |
+| **Capture Viewer** | Visualizador de capturas de tela e gravações |
+| **GitHub Toolkit** | Geradores de README e materiais de marketing |
+| **Creative Lab** | Experimentos interativos |
+| **Template** | Modelo para criar novos ambientes |
 
-## 🏗️ Architecture
+## 🏗️ Arquitetura
 
 ```
 claude-collaborate/
@@ -73,9 +73,9 @@ claude-collaborate/
     └── index.html
 ```
 
-## 🔌 WebSocket Protocol
+## 🔌 Protocolo WebSocket
 
-Claude Collaborate includes a WebSocket bridge for real-time communication with Claude Code:
+Claude Collaborate inclui uma ponte WebSocket para comunicação em tempo real com Claude Code:
 
 ```javascript
 // Browser sends to Claude
@@ -88,21 +88,21 @@ Claude Collaborate includes a WebSocket bridge for real-time communication with 
 { "type": "connected", "message": "Connected to Claude Collaborate Bridge" }
 ```
 
-## 🔗 API Endpoints
+## 🔗 Pontos de Extremidade da API
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Main Claude Collaborate UI |
-| `/{file}` | GET | Static files (whiteboard, etc.) |
-| `/ws` | WS | WebSocket bridge |
-| `/api/ws/messages` | GET | Read pending user messages |
-| `/api/ws/respond` | POST | Send response to browser |
-| `/api/ws/status` | GET | WebSocket bridge status |
-| `/health` | GET | Server health check |
+| Ponto de Extremidade | Método | Descrição |
+| ---------- | -------- | ------------- |
+| `/` | GET | Interface de usuário principal do Claude Collaborate |
+| `/{file}` | GET | Arquivos estáticos (lousa, etc.) |
+| `/ws` | WS | Ponte WebSocket |
+| `/api/ws/messages` | GET | Ler mensagens pendentes do usuário |
+| `/api/ws/respond` | POST | Enviar resposta para o navegador |
+| `/api/ws/status` | GET | Status da ponte WebSocket |
+| `/health` | GET | Verificação de saúde do servidor |
 
-## 💬 For Claude Code Users
+## 💬 Para Usuários do Claude Code
 
-Integrate with Claude Collaborate via the WebSocket bridge:
+Integre-se com o Claude Collaborate através da ponte WebSocket:
 
 ```bash
 # Read messages from the UI
@@ -114,9 +114,9 @@ curl -X POST http://localhost:8877/api/ws/respond \
   -d '{"content": "Hello from Claude!"}'
 ```
 
-## 🎭 Optional: Voice Integration
+## 🎭 Opcional: Integração de Voz
 
-Claude Collaborate works beautifully with [Voice Soundboard](https://github.com/mcp-tool-shop-org/voice-soundboard) for TTS:
+Claude Collaborate funciona perfeitamente com [Voice Soundboard](https://github.com/mcp-tool-shop-org/voice-soundboard) para TTS:
 
 ```bash
 # In another terminal, start Voice Soundboard
@@ -126,10 +126,10 @@ python -m voice_soundboard.web_server
 # Voice Studio will be available at http://localhost:8080/studio
 ```
 
-## 🛠️ Creating New Environments
+## 🛠️ Criando Novos Ambientes
 
-1. Copy `template.html` to `your-environment.html`
-2. Add it to the sidebar in `index.html`:
+1. Copie `template.html` para `your-environment.html`
+2. Adicione-o à barra lateral em `index.html`:
 ```html
 <div class="env-item" data-url="/your-environment.html" data-name="Your Environment">
     <div class="env-icon" style="background: linear-gradient(...);">🎯</div>
@@ -139,32 +139,32 @@ python -m voice_soundboard.web_server
     </div>
 </div>
 ```
-3. Refresh and start building!
+3. Atualize a página e comece a criar!
 
-## 📋 Requirements
+## 📋 Requisitos
 
 - Python 3.10+
 - aiohttp
-- Modern browser with WebSocket support
+- Navegador moderno com suporte a WebSocket
 
-## 🤝 Contributing
+## 🤝 Contribuições
 
-We welcome contributions! Whether it's:
-- New environment templates
-- UI/UX improvements
-- Bug fixes
-- Documentation
+Aceitamos contribuições! Seja:
+- Modelos de ambiente
+- Melhorias de UI/UX
+- Correções de bugs
+- Documentação
 
-Please open an issue or submit a PR.
+Por favor, abra um problema ou envie um pull request.
 
-## 📄 License
+## 📄 Licença
 
-MIT License - See [LICENSE](LICENSE) for details.
+Licença MIT - Veja [LICENSE](LICENSE) para detalhes.
 
-## 🙏 Acknowledgments
+## 🙏 Agradecimentos
 
-- **Anthropic** - For Claude and the vision of helpful AI
-- **The Community** - For pushing the boundaries of human-AI collaboration
+- **Anthropic** - Pela Claude e pela visão de uma IA útil
+- **A Comunidade** - Por expandir os limites da colaboração entre humanos e IA
 
 ---
 

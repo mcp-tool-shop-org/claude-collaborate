@@ -12,22 +12,22 @@
   <a href="https://mcp-tool-shop-org.github.io/claude-collaborate/"><img src="https://img.shields.io/badge/Landing_Page-live-blue" alt="Landing Page"></a>
 </p>
 
-> *Where Human Creativity Meets AI Intelligence*
+*人工智能与人类创造力的交汇点*
 
-Claude Collaborate is a unified sandbox environment for real-time human-AI collaboration. It brings together interactive workspaces, seamless communication, and creative tools in one beautiful interface.
+Claude Collaborate 是一个统一的沙箱环境，用于实现实时的人工智能与人类协作。它将交互式工作空间、无缝通信和创意工具整合到一个美观的界面中。
 
-## ✨ The Vision
+## ✨ 愿景
 
-Imagine a workspace where you can:
-- **Draw and brainstorm** on a shared whiteboard
-- **Write code together** with instant preview
-- **Play chess** and discuss strategy
-- **Create content** with GitHub-ready tools
-- **Communicate in real-time** via WebSocket bridge
+想象一个工作空间，您可以在其中：
+- **在共享白板上进行绘画和头脑风暴**
+- **与即时预览一起编写代码**
+- **下棋并讨论策略**
+- **使用可以直接发布到 GitHub 的工具创建内容**
+- **通过 WebSocket 桥进行实时通信**
 
-All in one place. All beautifully integrated.
+所有功能都集成在一个地方，并且设计精美。
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
 ```bash
 # Clone the repository
@@ -44,19 +44,19 @@ python server.py
 # http://localhost:8877
 ```
 
-## 🎨 Environments
+## 🎨 环境
 
-| Environment | Description |
-|-------------|-------------|
-| **Whiteboard** | Draw, sketch, and brainstorm visually |
-| **Code Workshop** | HTML/CSS/JS editor with live preview |
-| **Chess Workshop** | Strategy and tactics playground |
-| **Capture Viewer** | Screenshots and recordings viewer |
-| **GitHub Toolkit** | README and marketing generators |
-| **Creative Lab** | Interactive experiments |
-| **Template** | Starter for creating new environments |
+| 环境 | 描述 |
+| ------------- | ------------- |
+| **Whiteboard** | 视觉化地进行绘画、草图和头脑风暴 |
+| **Code Workshop** | 带有实时预览的 HTML/CSS/JS 编辑器 |
+| **Chess Workshop** | 策略和战术练习区 |
+| **Capture Viewer** | 屏幕截图和录像查看器 |
+| **GitHub Toolkit** | README 和营销文案生成器 |
+| **Creative Lab** | 交互式实验 |
+| **Template** | 创建新环境的模板 |
 
-## 🏗️ Architecture
+## 🏗️ 架构
 
 ```
 claude-collaborate/
@@ -73,9 +73,9 @@ claude-collaborate/
     └── index.html
 ```
 
-## 🔌 WebSocket Protocol
+## 🔌 WebSocket 协议
 
-Claude Collaborate includes a WebSocket bridge for real-time communication with Claude Code:
+Claude Collaborate 包含一个 WebSocket 桥，用于与 Claude Code 进行实时通信：
 
 ```javascript
 // Browser sends to Claude
@@ -88,21 +88,21 @@ Claude Collaborate includes a WebSocket bridge for real-time communication with 
 { "type": "connected", "message": "Connected to Claude Collaborate Bridge" }
 ```
 
-## 🔗 API Endpoints
+## 🔗 API 接口
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Main Claude Collaborate UI |
-| `/{file}` | GET | Static files (whiteboard, etc.) |
-| `/ws` | WS | WebSocket bridge |
-| `/api/ws/messages` | GET | Read pending user messages |
-| `/api/ws/respond` | POST | Send response to browser |
-| `/api/ws/status` | GET | WebSocket bridge status |
-| `/health` | GET | Server health check |
+| 接口 | 方法 | 描述 |
+| ---------- | -------- | ------------- |
+| `/` | GET | Claude Collaborate 主界面 |
+| `/{file}` | GET | 静态文件（白板等） |
+| `/ws` | WS | WebSocket 桥 |
+| `/api/ws/messages` | GET | 读取待处理的用户消息 |
+| `/api/ws/respond` | POST | 向浏览器发送响应 |
+| `/api/ws/status` | GET | WebSocket 桥状态 |
+| `/health` | GET | 服务器健康检查 |
 
-## 💬 For Claude Code Users
+## 💬 针对 Claude Code 用户
 
-Integrate with Claude Collaborate via the WebSocket bridge:
+通过 WebSocket 桥与 Claude Collaborate 集成：
 
 ```bash
 # Read messages from the UI
@@ -114,9 +114,9 @@ curl -X POST http://localhost:8877/api/ws/respond \
   -d '{"content": "Hello from Claude!"}'
 ```
 
-## 🎭 Optional: Voice Integration
+## 🎭 可选：语音集成
 
-Claude Collaborate works beautifully with [Voice Soundboard](https://github.com/mcp-tool-shop-org/voice-soundboard) for TTS:
+Claude Collaborate 与 [Voice Soundboard](https://github.com/mcp-tool-shop-org/voice-soundboard) 配合使用，支持文本转语音：
 
 ```bash
 # In another terminal, start Voice Soundboard
@@ -126,10 +126,10 @@ python -m voice_soundboard.web_server
 # Voice Studio will be available at http://localhost:8080/studio
 ```
 
-## 🛠️ Creating New Environments
+## 🛠️ 创建新环境
 
-1. Copy `template.html` to `your-environment.html`
-2. Add it to the sidebar in `index.html`:
+1. 将 `template.html` 复制到 `your-environment.html`
+2. 在 `index.html` 中将其添加到侧边栏：
 ```html
 <div class="env-item" data-url="/your-environment.html" data-name="Your Environment">
     <div class="env-icon" style="background: linear-gradient(...);">🎯</div>
@@ -139,32 +139,32 @@ python -m voice_soundboard.web_server
     </div>
 </div>
 ```
-3. Refresh and start building!
+3. 刷新并开始构建！
 
-## 📋 Requirements
+## 📋 需求
 
 - Python 3.10+
 - aiohttp
-- Modern browser with WebSocket support
+- 具有 WebSocket 支持的现代浏览器
 
-## 🤝 Contributing
+## 🤝 贡献
 
-We welcome contributions! Whether it's:
-- New environment templates
-- UI/UX improvements
-- Bug fixes
-- Documentation
+我们欢迎贡献！无论是：
+- 新的环境模板
+- UI/UX 改进
+- 错误修复
+- 文档
 
-Please open an issue or submit a PR.
+请提出问题或提交拉取请求。
 
-## 📄 License
+## 📄 许可证
 
-MIT License - See [LICENSE](LICENSE) for details.
+MIT 许可证 - 详情请参阅 [LICENSE](LICENSE)。
 
-## 🙏 Acknowledgments
+## 🙏 致谢
 
-- **Anthropic** - For Claude and the vision of helpful AI
-- **The Community** - For pushing the boundaries of human-AI collaboration
+- **Anthropic** - 感谢他们提供的 Claude 以及对有益人工智能的愿景
+- **社区** - 感谢他们不断突破人类与人工智能协作的界限
 
 ---
 

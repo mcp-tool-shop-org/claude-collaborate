@@ -81,3 +81,6 @@ Thumbs.db
 
 # Deliverables archive
 claude-collaborate-master-deliverables/
+site/.astro/
+site/node_modules/
+site/dist/
