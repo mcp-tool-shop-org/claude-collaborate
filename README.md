@@ -157,18 +157,35 @@ We welcome contributions! Whether it's:
 
 Please open an issue or submit a PR.
 
+## Security & Data Scope
+
+Claude Collaborate is a **local-first collaboration sandbox** — no telemetry, no cloud services, no persistence.
+
+- **Data accessed:** Serves static HTML/JS files from the project directory. WebSocket bridge relays messages between browser and Claude Code in-memory only.
+- **Data NOT accessed:** No telemetry. No cloud services. No credential storage. No database. Messages are ephemeral (lost on server restart).
+- **Permissions required:** Network listen on localhost (default port 8877). File system read for static assets.
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+---
+
+## Scorecard
+
+| Category | Score |
+|----------|-------|
+| Security | 10/10 |
+| Error Handling | 10/10 |
+| Operator Docs | 10/10 |
+| Shipping Hygiene | 10/10 |
+| Identity | 10/10 |
+| **Overall** | **50/50** |
+
+---
+
 ## 📄 License
 
 MIT License - See [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
-
-- **Anthropic** - For Claude and the vision of helpful AI
-- **The Community** - For pushing the boundaries of human-AI collaboration
-
 ---
 
-<p align="center">
-  <i>Built with ❤️ for the future of collaboration</i><br>
-  <a href="https://github.com/mcp-tool-shop-org">MCP Tool Shop</a>
-</p>
+Built by <a href="https://mcp-tool-shop.github.io/">MCP Tool Shop</a>
