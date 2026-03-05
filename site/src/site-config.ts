@@ -14,7 +14,7 @@ export const config: SiteConfig = {
     headlineAccent: 'meets AI intelligence.',
     description: 'A unified sandbox for real-time human-AI collaboration — shared whiteboard, live code editor, chess workshop, and more. All connected through a WebSocket bridge to Claude Code.',
     primaryCta: { href: '#quickstart', label: 'Quick start' },
-    secondaryCta: { href: '#environments', label: 'See environments' },
+    secondaryCta: { href: 'handbook/', label: 'Read the Handbook' },
     previews: [
       {
         label: 'Start',
