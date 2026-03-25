@@ -14,10 +14,13 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 
 from aiohttp import WSMsgType, web
+
+__version__ = "1.0.3"
 
 # Configure logging
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -255,6 +258,19 @@ def create_app() -> web.Application:
 
 def main():
     """Run the server."""
+    args = sys.argv[1:]
+    if "--version" in args or "-V" in args:
+        print(f"claude-collaborate {__version__}")
+        sys.exit(0)
+    if "--help" in args or "-h" in args:
+        print(f"claude-collaborate {__version__} — Real-time human-AI collaboration server\n")
+        print("Usage: python server.py [options]\n")
+        print("Options:")
+        print("  --version, -V   Show version and exit")
+        print("  --help, -h      Show this help and exit")
+        print(f"\nStarts the server on http://localhost:{PORT}")
+        sys.exit(0)
+
     print()
     print("=" * 60)
     print("  Claude Collaborate")
@@ -275,7 +291,7 @@ def main():
     print()
 
     app = create_app()
-    web.run_app(app, host="0.0.0.0", port=PORT, print=None)
+    web.run_app(app, host="127.0.0.1", port=PORT, print=None)
 
 
 if __name__ == "__main__":

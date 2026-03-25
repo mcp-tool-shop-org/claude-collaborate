@@ -159,11 +159,11 @@ Please open an issue or submit a PR.
 
 ## Security & Data Scope
 
-Claude Collaborate is a **local-first collaboration sandbox** — no telemetry, no cloud services, no persistence.
+Claude Collaborate is a **local-first collaboration sandbox** — no telemetry, no cloud services.
 
-- **Data accessed:** Serves static HTML/JS files from the project directory. WebSocket bridge relays messages between browser and Claude Code in-memory only.
-- **Data NOT accessed:** No telemetry. No cloud services. No credential storage. No database. Messages are ephemeral (lost on server restart).
-- **Permissions required:** Network listen on localhost (default port 8877). File system read for static assets.
+- **Data accessed:** Serves static HTML/JS files from the project directory. WebSocket bridge relays messages via JSONL files on disk (`messages.jsonl`, `claude_responses.jsonl`), cleared after read and rotated at 10 MB.
+- **Data NOT accessed:** No telemetry. No cloud services. No credential storage. No database.
+- **Permissions required:** Network listen on localhost (default ports 8877/8878). File system read/write for static assets and bridge message files.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 

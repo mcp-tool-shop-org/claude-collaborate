@@ -5,7 +5,18 @@ All notable changes to Claude Collaborate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.3] - 2026-03-25
+
+### Added
+- `--version`/`-V` and `--help`/`-h` CLI flags for `server.py`
+- CLI flag tests (4 new tests, 13 total)
+
+### Fixed
+- `server.py` now binds to `127.0.0.1` instead of `0.0.0.0` (security: local-first tool)
+- SECURITY.md and README data scope corrected — bridge writes JSONL files to disk, not in-memory only
+
+### Changed
+- Import ordering fix in `server.py` (ruff I001)
 
 ## [1.0.2] - 2026-02-27
 
@@ -60,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 1.0.1 | 2026-02-23 | CI, lint fixes, URL corrections |
 | 1.0.0 | 2026-01-24 | Initial release |
 
-[Unreleased]: https://github.com/mcp-tool-shop-org/claude-collaborate/compare/v1.0.1...HEAD
+[1.0.3]: https://github.com/mcp-tool-shop-org/claude-collaborate/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/mcp-tool-shop-org/claude-collaborate/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/mcp-tool-shop-org/claude-collaborate/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/mcp-tool-shop-org/claude-collaborate/releases/tag/v1.0.0
