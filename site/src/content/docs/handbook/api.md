@@ -36,7 +36,8 @@ Connect to `ws://localhost:8877/ws` from the browser or any WebSocket client. Th
 ```json
 {
   "type": "connected",
-  "message": "WebSocket connection established"
+  "message": "Connected to Claude Collaborate Bridge",
+  "timestamp": "2026-03-05T10:30:00.000000"
 }
 ```
 
@@ -46,10 +47,10 @@ The REST API lets Claude Code interact with the WebSocket bridge without maintai
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/ws/messages` | Read pending messages sent from the browser UI. Returns an array of messages and clears the queue. |
-| `POST` | `/api/ws/respond` | Send a response from Claude back to the browser. Body: `{"content": "..."}` |
-| `GET` | `/api/ws/status` | Check WebSocket bridge connection status. Returns connected client count and bridge state. |
-| `GET` | `/health` | Server health check. Returns server uptime and version info. |
+| `GET` | `/api/ws/messages` | Read pending messages from the browser UI. Returns `{"messages": [...], "count": N}` and clears the queue. |
+| `POST` | `/api/ws/respond` | Send a response from Claude back to the browser. Body: `{"content": "..."}`. Returns `{"status": "sent", "clients": N}`. |
+| `GET` | `/api/ws/status` | Check WebSocket bridge status. Returns `{"connected_clients": N, "status": "active"|"idle", "timestamp": "..."}`. |
+| `GET` | `/health` | Server health check. Returns `{"status": "healthy", "service": "claude-collaborate", "timestamp": "..."}`. |
 | `WS` | `/ws` | Direct WebSocket connection for real-time bidirectional messaging. |
 
 ## Claude Code integration
@@ -65,13 +66,16 @@ curl http://localhost:8877/api/ws/messages
 Example response:
 
 ```json
-[
-  {
-    "type": "user_message",
-    "content": "Draw a box around the header",
-    "timestamp": "2026-03-05T10:30:00Z"
-  }
-]
+{
+  "messages": [
+    {
+      "type": "user_message",
+      "content": "Draw a box around the header",
+      "timestamp": "2026-03-05T10:30:00.000000"
+    }
+  ],
+  "count": 1
+}
 ```
 
 ### Send a response
@@ -97,7 +101,8 @@ Example response:
 ```json
 {
   "connected_clients": 1,
-  "bridge_active": true
+  "status": "active",
+  "timestamp": "2026-03-05T10:30:00.000000"
 }
 ```
 
@@ -108,6 +113,22 @@ Confirm the server is up and responding.
 ```bash
 curl http://localhost:8877/health
 ```
+
+## Standalone WebSocket bridge
+
+`ws_bridge.py` is an alternative standalone bridge that runs on port 8878. It provides the same WebSocket and REST functionality as the main server but with file rotation (JSONL files are rotated at 10 MB) and async file locks to prevent race conditions. Use it when you need the bridge to run independently from the static file server.
+
+```bash
+python ws_bridge.py
+```
+
+The standalone bridge exposes slightly different REST paths:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/messages` | Read pending messages (note: no `/ws/` prefix) |
+| `POST` | `/api/respond` | Send response to browser (note: no `/ws/` prefix) |
+| `GET` | `/health` | Health check |
 
 ## Integration pattern
 

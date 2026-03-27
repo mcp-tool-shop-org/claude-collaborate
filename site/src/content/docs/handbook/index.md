@@ -7,7 +7,7 @@ sidebar:
 
 Welcome to the claude-collaborate handbook.
 
-claude-collaborate is a unified sandbox for real-time human-AI collaboration. It provides six interactive environments -- whiteboard, code editor, chess workshop, capture viewer, GitHub toolkit, and creative lab -- all connected through a WebSocket bridge to Claude Code. You draw, write, strategize, and experiment in the browser while Claude sees your work and responds in real time.
+claude-collaborate is a unified sandbox for real-time human-AI collaboration. It provides six built-in environments -- whiteboard, code workshop, chess workshop, creative lab, capture viewer, and GitHub toolkit -- plus an optional Voice Studio link, all connected through a WebSocket bridge to Claude Code. You draw, write, strategize, and experiment in the browser while Claude sees your work and responds in real time.
 
 ## How it works
 
@@ -15,8 +15,9 @@ A lightweight Python server (`server.py`) hosts the environments and runs a WebS
 
 ## What's inside
 
+- **[Beginners](/claude-collaborate/handbook/beginners/)** -- New to claude-collaborate? Start here for a guided walkthrough
 - **[Getting Started](/claude-collaborate/handbook/getting-started/)** -- Clone the repo, install one dependency, and open the sandbox in under a minute
-- **[Environments](/claude-collaborate/handbook/environments/)** -- Tour of all six environments and how to create your own
+- **[Environments](/claude-collaborate/handbook/environments/)** -- Tour of all built-in environments and how to create your own
 - **[API Reference](/claude-collaborate/handbook/api/)** -- WebSocket protocol, REST endpoints, and Claude Code integration examples
 
 ## Design principles

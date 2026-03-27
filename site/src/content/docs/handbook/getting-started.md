@@ -29,7 +29,14 @@ pip install aiohttp
 python server.py
 ```
 
-The server starts on `http://localhost:8877` by default. Open that URL in your browser and you will see the sidebar with all six environments.
+The server starts on `http://localhost:8877` by default. Open that URL in your browser and you will see the sidebar with all environments.
+
+The server also supports CLI flags:
+
+```bash
+python server.py --version   # Print version and exit
+python server.py --help      # Print usage and exit
+```
 
 ## Verify the connection
 
@@ -59,7 +66,19 @@ curl -X POST http://localhost:8877/api/ws/respond \
 
 The response appears in the browser chat panel immediately.
 
+## Run the test suite
+
+The project includes a Makefile for verification:
+
+```bash
+make verify   # Runs lint + typecheck + tests
+make test     # Tests only (pytest)
+make lint     # ruff check
+```
+
 ## What to read next
+
+- [Beginners](/claude-collaborate/handbook/beginners/) walks through your first collaboration session step by step
 
 - [Environments](/claude-collaborate/handbook/environments/) describes each of the six workspaces and how to create new ones
 - [API Reference](/claude-collaborate/handbook/api/) covers the WebSocket protocol and all REST endpoints

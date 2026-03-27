@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-claude-collaborate ships with six environments. Each is a self-contained HTML file served by the Python server. Switch between them instantly from the sidebar -- no page reload, no lost state.
+claude-collaborate ships with six built-in environments plus an optional Voice Studio link. Each built-in environment is a self-contained HTML file served by the Python server. Switch between them instantly from the sidebar -- no page reload, no lost state.
 
 ## Whiteboard
 
@@ -31,6 +31,10 @@ README and marketing content generators built into the sandbox. Describe your pr
 
 An open-ended workspace for experiments and one-off creative explorations. No fixed purpose -- use it for anything that does not fit the other five environments. Interactive visualizations, generative art, data explorations, or whatever you and Claude dream up.
 
+## Voice Studio (optional)
+
+An external link to the [Voice Soundboard](https://github.com/mcp-tool-shop-org/voice-soundboard) TTS studio at `http://localhost:8080/studio`. This entry only works when voice-soundboard is running separately. It opens in the same iframe container as the built-in environments.
+
 ## Creating a new environment
 
 Every environment is a plain HTML file. To add your own:
@@ -41,12 +45,18 @@ Every environment is a plain HTML file. To add your own:
 cp template.html my-workspace.html
 ```
 
-2. **Add a sidebar entry** in `index.html`. Find the sidebar `<div>` and add one element:
+2. **Add a sidebar entry** in `index.html`. Find the `env-list` `<div>` and add an entry before the "Add Environment" item:
 
 ```html
-<div class="env-item" data-env="my-workspace">My Workspace</div>
+<div class="env-item" data-url="/my-workspace.html" data-name="My Workspace">
+    <div class="env-icon" style="background: linear-gradient(135deg, #58a6ff, #79c0ff);">🎯</div>
+    <div class="env-info">
+        <h3>My Workspace</h3>
+        <p>Description of your environment</p>
+    </div>
+</div>
 ```
 
 3. **Refresh the browser.** Your new environment appears in the sidebar immediately. No build step, no restart.
 
-The template includes the WebSocket connection boilerplate, the chat panel, and a blank content area. Everything you need to start building is already wired up.
+The template includes CSS variables matching the dark theme, a header, and a content area. Wire up WebSocket communication by connecting to `ws://localhost:8877/ws` for real-time Claude integration.

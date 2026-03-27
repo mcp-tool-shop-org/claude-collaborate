@@ -51,26 +51,29 @@ python server.py
 | **Whiteboard** | Draw, sketch, and brainstorm visually |
 | **Code Workshop** | HTML/CSS/JS editor with live preview |
 | **Chess Workshop** | Strategy and tactics playground |
+| **Creative Lab** | Interactive experiments and explorations |
 | **Capture Viewer** | Screenshots and recordings viewer |
 | **GitHub Toolkit** | README and marketing generators |
-| **Creative Lab** | Interactive experiments |
-| **Template** | Starter for creating new environments |
+| **Voice Studio** | TTS integration (requires [voice-soundboard](https://github.com/mcp-tool-shop-org/voice-soundboard)) |
+| **Add Environment** | Starter template for creating new environments |
 
 ## 🏗️ Architecture
 
 ```
 claude-collaborate/
+├── server.py            # aiohttp server + built-in WebSocket bridge
+├── ws_bridge.py         # Standalone WebSocket bridge (port 8878)
 ├── index.html           # Main UI with environment switcher
-├── server.py            # aiohttp server
-├── ws_bridge.py         # WebSocket bridge for Claude Code
 ├── whiteboard.html      # Drawing and brainstorming
 ├── code-playground.html # Live HTML/CSS/JS editor
 ├── chess.html           # Chess analysis board
 ├── capture-viewer.html  # Screenshot/recording viewer
 ├── github-toolkit.html  # README and marketing tools
 ├── template.html        # Starter for new environments
-└── adventures/          # Creative Lab experiments
-    └── index.html
+├── adventures/          # Creative Lab experiments
+│   └── index.html
+├── tests/               # pytest test suite
+└── site/                # Starlight handbook
 ```
 
 ## 🔌 WebSocket Protocol
@@ -161,9 +164,9 @@ Please open an issue or submit a PR.
 
 Claude Collaborate is a **local-first collaboration sandbox** — no telemetry, no cloud services.
 
-- **Data accessed:** Serves static HTML/JS files from the project directory. WebSocket bridge relays messages via JSONL files on disk (`messages.jsonl`, `claude_responses.jsonl`), cleared after read and rotated at 10 MB.
+- **Data accessed:** Serves static HTML/JS files from the project directory. WebSocket bridge relays messages via JSONL files on disk (`messages.jsonl`, `claude_responses.jsonl`), cleared after read. The standalone bridge (`ws_bridge.py`) rotates files at 10 MB.
 - **Data NOT accessed:** No telemetry. No cloud services. No credential storage. No database.
-- **Permissions required:** Network listen on localhost (default ports 8877/8878). File system read/write for static assets and bridge message files.
+- **Permissions required:** Network listen on localhost (port 8877 for the main server, 8878 for the standalone bridge). File system read/write for static assets and bridge message files.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
