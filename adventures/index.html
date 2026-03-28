@@ -648,7 +648,11 @@
             const entry = document.createElement('div');
             entry.className = 'activity-entry';
             const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            entry.innerHTML = `<span class="time">${time}</span> ${text}`;
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time';
+            timeSpan.textContent = time;
+            entry.appendChild(timeSpan);
+            entry.appendChild(document.createTextNode(' ' + text));
             activityEntries.insertBefore(entry, activityEntries.firstChild);
 
             // Keep only last 20 entries
@@ -670,13 +674,13 @@
             pixel.className = 'pixel';
             pixel.dataset.index = i;
 
-            pixel.addEventListener('mousedown', (e) => {
+            pixel.addEventListener('pointerdown', (e) => {
                 isDrawing = true;
                 pixel.style.background = currentColor;
                 logActivity(`Painted pixel ${i} with ${currentColor}`);
             });
 
-            pixel.addEventListener('mouseenter', () => {
+            pixel.addEventListener('pointerenter', () => {
                 if (isDrawing) {
                     pixel.style.background = currentColor;
                 }
@@ -685,7 +689,7 @@
             pixelGrid.appendChild(pixel);
         }
 
-        document.addEventListener('mouseup', () => isDrawing = false);
+        document.addEventListener('pointerup', () => isDrawing = false);
 
         // Create palette
         colors.forEach((color, i) => {
@@ -764,6 +768,8 @@
         const pCtx = particleCanvas.getContext('2d');
         let particles = [];
         let particleMode = 'stars';
+        const MAX_PARTICLES = 300;
+        let animationRunning = false;
 
         function resizeParticleCanvas() {
             particleCanvas.width = particleCanvas.offsetWidth;
@@ -782,22 +788,21 @@
 
         class Particle {
             constructor(x, y) {
-                const config = particleConfigs[particleMode];
+                this.config = {...particleConfigs[particleMode]};
                 this.x = x;
                 this.y = y;
                 this.vx = (Math.random() - 0.5) * 8;
                 this.vy = (Math.random() - 0.5) * 8;
-                this.color = config.colors[Math.floor(Math.random() * config.colors.length)];
-                this.size = config.size[0] + Math.random() * (config.size[1] - config.size[0]);
+                this.color = this.config.colors[Math.floor(Math.random() * this.config.colors.length)];
+                this.size = this.config.size[0] + Math.random() * (this.config.size[1] - this.config.size[0]);
                 this.life = 100 + Math.random() * 50;
                 this.maxLife = this.life;
             }
 
             update() {
-                const config = particleConfigs[particleMode];
-                this.vy += config.gravity;
-                this.vx *= config.drag;
-                this.vy *= config.drag;
+                this.vy += this.config.gravity;
+                this.vx *= this.config.drag;
+                this.vy *= this.config.drag;
                 this.x += this.vx;
                 this.y += this.vy;
                 this.life--;
@@ -814,20 +819,32 @@
             }
         }
 
-        particleCanvas.addEventListener('mousemove', (e) => {
+        function startParticleLoop() {
+            if (!animationRunning) {
+                animationRunning = true;
+                animateParticles();
+            }
+        }
+
+        particleCanvas.addEventListener('pointermove', (e) => {
+            if (particles.length >= MAX_PARTICLES) return;
             const rect = particleCanvas.getBoundingClientRect();
             for (let i = 0; i < 2; i++) {
+                if (particles.length >= MAX_PARTICLES) break;
                 particles.push(new Particle(e.clientX - rect.left, e.clientY - rect.top));
             }
+            startParticleLoop();
         });
 
-        particleCanvas.addEventListener('click', (e) => {
+        particleCanvas.addEventListener('pointerdown', (e) => {
             const rect = particleCanvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             for (let i = 0; i < 50; i++) {
+                if (particles.length >= MAX_PARTICLES) break;
                 particles.push(new Particle(x, y));
             }
+            startParticleLoop();
             logActivity(`${particleMode} burst at (${Math.round(x)}, ${Math.round(y)})`);
         });
 
@@ -850,9 +867,12 @@
                 return p.update();
             });
 
+            if (particles.length === 0) {
+                animationRunning = false;
+                return;
+            }
             requestAnimationFrame(animateParticles);
         }
-        animateParticles();
 
         // ========== STORY BUILDER ==========
         const storyCanvas = document.getElementById('story-canvas');
@@ -944,11 +964,13 @@
         function checkPattern(answer) {
             if (answer === currentPatternAnswer) {
                 patternScore++;
-                patternFeedback.innerHTML = `<span style="color:#1dd1a1">✓ Correct! Score: ${patternScore}</span>`;
+                patternFeedback.textContent = `✓ Correct! Score: ${patternScore}`;
+                patternFeedback.style.color = '#1dd1a1';
                 logActivity(`Pattern solved! Score: ${patternScore}`);
                 setTimeout(generatePattern, 1200);
             } else {
-                patternFeedback.innerHTML = `<span style="color:#ff6b6b">✗ Try again!</span>`;
+                patternFeedback.textContent = '✗ Try again!';
+                patternFeedback.style.color = '#ff6b6b';
                 logActivity(`Wrong pattern guess: ${answer}`);
             }
         }

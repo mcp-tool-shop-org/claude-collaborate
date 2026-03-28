@@ -12,8 +12,8 @@ Then in Claude Collaborate, connect to ws://localhost:8878
 """
 
 import asyncio
+import datetime
 import json
-from datetime import datetime
 from pathlib import Path
 
 import aiohttp
@@ -23,9 +23,9 @@ from aiohttp import web
 WS_PORT = 8878
 MESSAGE_FILE = Path(__file__).parent / "messages.jsonl"
 CLAUDE_RESPONSE_FILE = Path(__file__).parent / "claude_responses.jsonl"
-MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB rotation threshold
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+MAX_CLIENTS = 50
 
-# Connected WebSocket clients
 connected_clients = set()
 
 # File I/O locks to prevent race conditions on read+clear operations
@@ -59,26 +59,32 @@ def _rotate_file_if_needed(file_path: Path) -> None:
         # Create fresh empty file
         file_path.touch()
 
-        ts = datetime.now().strftime('%H:%M:%S')
+        ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
         print(f"[{ts}] Rotated {file_path.name} (was {size:,} bytes)")
     except OSError as e:
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] File rotation error: {e}")
+        ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+        print(f"[{ts}] File rotation error: {e}")
 
 
 async def websocket_handler(request):
     """Handle WebSocket connections from browser."""
-    ws = web.WebSocketResponse()
+    if len(connected_clients) >= MAX_CLIENTS:
+        ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+        print(f"[{ts}] Connection rejected: at capacity ({MAX_CLIENTS})")
+        return web.Response(status=503, text="Server at capacity")
+
+    ws = web.WebSocketResponse(max_msg_size=1*1024*1024)
     await ws.prepare(request)
 
     connected_clients.add(ws)
-    ts = datetime.now().strftime('%H:%M:%S')
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
     print(f"[{ts}] Client connected. Total: {len(connected_clients)}")
 
     # Send welcome message
     await ws.send_json({
         "type": "connected",
         "message": "Connected to Claude Collaborate Bridge",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     })
 
     try:
@@ -93,7 +99,7 @@ async def websocket_handler(request):
                 print(f"WebSocket error: {ws.exception()}")
     finally:
         connected_clients.discard(ws)
-        ts = datetime.now().strftime('%H:%M:%S')
+        ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
         print(f"[{ts}] Client disconnected. Total: {len(connected_clients)}")
 
     return ws
@@ -102,7 +108,7 @@ async def websocket_handler(request):
 async def handle_message(ws, data):
     """Process incoming messages from browser."""
     msg_type = data.get("type", "unknown")
-    timestamp = datetime.now().isoformat()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     if msg_type == "user_message":
         # User sent a message to Claude
@@ -150,8 +156,12 @@ async def get_claude_responses():
                 with open(CLAUDE_RESPONSE_FILE, encoding="utf-8") as f:
                     for line in f:
                         if line.strip():
-                            responses.append(json.loads(line))
-                # Clear the file after reading
+                            try:
+                                responses.append(json.loads(line))
+                            except json.JSONDecodeError as e:
+                                now = datetime.datetime.now(datetime.timezone.utc)
+                                ts = now.strftime('%H:%M:%S')
+                                print(f"[{ts}] Skipping malformed response line: {e}")
                 CLAUDE_RESPONSE_FILE.write_text("")
             except Exception as e:
                 print(f"Error reading responses: {e}")
@@ -160,9 +170,10 @@ async def get_claude_responses():
 
 async def broadcast_to_clients(message):
     """Send message to all connected clients."""
-    if connected_clients:
+    clients = list(connected_clients)
+    if clients:
         await asyncio.gather(
-            *[client.send_json(message) for client in connected_clients if not client.closed],
+            *[client.send_json(message) for client in clients if not client.closed],
             return_exceptions=True
         )
 
@@ -175,7 +186,7 @@ async def post_response(request):
         message = {
             "type": "claude_response",
             "content": data.get("content", ""),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }
 
         # Broadcast to all connected browser clients
@@ -189,7 +200,11 @@ async def post_response(request):
 
         return web.json_response({"status": "sent", "clients": len(connected_clients)})
     except Exception as e:
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
+        ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+        print(f"[{ts}] post_response error: {e}")
+        return web.json_response(
+            {"status": "error", "message": "Internal server error"}, status=500
+        )
 
 
 async def get_messages(request):
@@ -201,11 +216,20 @@ async def get_messages(request):
                 with open(MESSAGE_FILE, encoding="utf-8") as f:
                     for line in f:
                         if line.strip():
-                            messages.append(json.loads(line))
-                # Clear the file after reading
+                            try:
+                                messages.append(json.loads(line))
+                            except json.JSONDecodeError as e:
+                                now = datetime.datetime.now(datetime.timezone.utc)
+                                ts = now.strftime('%H:%M:%S')
+                                print(f"[{ts}] Skipping malformed message line: {e}")
                 MESSAGE_FILE.write_text("")
             except Exception as e:
-                return web.json_response({"status": "error", "message": str(e)}, status=500)
+                ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+                print(f"[{ts}] get_messages error: {e}")
+                return web.json_response(
+                    {"status": "error", "message": "Internal server error"},
+                    status=500,
+                )
 
     return web.json_response({"messages": messages, "count": len(messages)})
 
@@ -215,13 +239,13 @@ async def health_check(request):
     return web.json_response({
         "status": "ok",
         "connected_clients": len(connected_clients),
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     })
 
 
 def create_app():
     """Create the aiohttp application."""
-    app = web.Application()
+    app = web.Application(client_max_size=1*1024*1024)
 
     # WebSocket route
     app.router.add_get("/ws", websocket_handler)
@@ -236,12 +260,12 @@ def create_app():
         async def middleware(request):
             if request.method == "OPTIONS":
                 return web.Response(headers={
-                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Origin": "http://localhost:8877",
                     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
                     "Access-Control-Allow-Headers": "Content-Type",
                 })
             response = await handler(request)
-            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Origin"] = "http://localhost:8877"
             return response
         return middleware
 

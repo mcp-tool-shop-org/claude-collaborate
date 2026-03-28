@@ -1,9 +1,8 @@
 name: Release Claude Collaborate
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       version:

@@ -743,13 +743,24 @@ Made with love by [Your Name](https://github.com/yourusername)
             document.getElementById('readme-preview').textContent = readme;
         }
 
-        function copyReadme() {
-            navigator.clipboard.writeText(document.getElementById('readme-preview').textContent);
-            alert('README copied to clipboard!');
+        function flashButton(btn, text) {
+            const original = btn.textContent;
+            btn.textContent = text;
+            setTimeout(() => { btn.textContent = original; }, 2000);
+        }
+
+        async function copyReadme() {
+            const btn = document.querySelector('[onclick="copyReadme()"]');
+            try {
+                await navigator.clipboard.writeText(document.getElementById('readme-preview').textContent);
+                flashButton(btn, 'Copied!');
+            } catch (e) {
+                flashButton(btn, 'Copy failed');
+            }
         }
 
         // Badge Builder
-        function copyBadge(type) {
+        async function copyBadge(type) {
             const badges = {
                 version: '![Version](https://img.shields.io/pypi/v/YOUR_PACKAGE)',
                 downloads: '![Downloads](https://img.shields.io/pypi/dm/YOUR_PACKAGE)',
@@ -765,8 +776,13 @@ Made with love by [Your Name](https://github.com/yourusername)
                 ai: '![AI Powered](https://img.shields.io/badge/AI-Powered-purple)',
                 claude: '![Claude](https://img.shields.io/badge/Claude-Ready-orange)'
             };
-            navigator.clipboard.writeText(badges[type]);
-            alert('Badge copied!');
+            const btn = event.currentTarget;
+            try {
+                await navigator.clipboard.writeText(badges[type]);
+                flashButton(btn, 'Copied!');
+            } catch (e) {
+                flashButton(btn, 'Copy failed');
+            }
         }
 
         // Checklist
@@ -871,9 +887,14 @@ Try it out: [GitHub link]
             document.getElementById('marketing-preview').textContent = post;
         }
 
-        function copyMarketing() {
-            navigator.clipboard.writeText(document.getElementById('marketing-preview').textContent);
-            alert('Marketing copy copied!');
+        async function copyMarketing() {
+            const btn = document.querySelector('[onclick="copyMarketing()"]');
+            try {
+                await navigator.clipboard.writeText(document.getElementById('marketing-preview').textContent);
+                flashButton(btn, 'Copied!');
+            } catch (e) {
+                flashButton(btn, 'Copy failed');
+            }
         }
 
         // Initialize

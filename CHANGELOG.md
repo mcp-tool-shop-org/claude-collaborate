@@ -68,6 +68,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.0.3 | 2026-03-25 | CLI flags, security bind fix, data scope correction |
+| 1.0.2 | 2026-02-27 | SECURITY.md, SHIP_GATE.md, Makefile, scorecard |
 | 1.0.1 | 2026-02-23 | CI, lint fixes, URL corrections |
 | 1.0.0 | 2026-01-24 | Initial release |
 

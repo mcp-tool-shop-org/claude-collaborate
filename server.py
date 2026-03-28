@@ -11,11 +11,12 @@ Then open http://localhost:8877 in your browser.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from aiohttp import WSMsgType, web
@@ -28,12 +29,26 @@ logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 PORT = 8877
-DIRECTORY = Path(__file__).parent
+DIRECTORY = Path(__file__).parent.resolve()
+MAX_WS_CLIENTS = 50
 
 # WebSocket state
 connected_ws_clients: set[web.WebSocketResponse] = set()
+_messages_lock = asyncio.Lock()
 MESSAGE_FILE = DIRECTORY / "messages.jsonl"
 RESPONSE_FILE = DIRECTORY / "claude_responses.jsonl"
+
+
+def _safe_resolve(root: Path, filename: str) -> Path | None:
+    try:
+        resolved = (root / filename).resolve()
+    except (OSError, ValueError):
+        return None
+    if not str(resolved).startswith(str(root)):
+        return None
+    if not resolved.is_file():
+        return None
+    return resolved
 
 
 async def index_handler(request: web.Request) -> web.StreamResponse:
@@ -44,15 +59,9 @@ async def index_handler(request: web.Request) -> web.StreamResponse:
 async def static_handler(request: web.Request) -> web.StreamResponse:
     """Serve static files."""
     filename = request.match_info.get('filename', '')
-
-    # Security: prevent directory traversal
-    if '..' in filename or filename.startswith('/'):
-        return web.Response(text="Forbidden", status=403)
-
-    file_path = DIRECTORY / filename
-    if file_path.exists() and file_path.is_file():
+    file_path = _safe_resolve(DIRECTORY, filename)
+    if file_path:
         return web.FileResponse(file_path)
-
     return web.Response(text="Not Found", status=404)
 
 
@@ -67,18 +76,17 @@ async def adventures_handler(request: web.Request) -> web.StreamResponse:
 async def adventures_static_handler(request: web.Request) -> web.StreamResponse:
     """Serve Creative Lab static files."""
     filename = request.match_info.get('filename', '')
-    if '..' in filename or filename.startswith('/'):
-        return web.Response(text="Forbidden", status=403)
-
-    file_path = DIRECTORY / "adventures" / filename
-    if file_path.exists() and file_path.is_file():
+    file_path = _safe_resolve(DIRECTORY / "adventures", filename)
+    if file_path:
         return web.FileResponse(file_path)
-
     return web.Response(text="Not Found", status=404)
 
 
 async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
     """Handle WebSocket connections for real-time Claude communication."""
+    if len(connected_ws_clients) >= MAX_WS_CLIENTS:
+        return web.Response(text="Too many connections", status=503)
+
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
@@ -89,7 +97,7 @@ async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
     await ws.send_json({
         "type": "connected",
         "message": "Connected to Claude Collaborate Bridge",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
 
     try:
@@ -119,7 +127,7 @@ async def handle_ws_message(ws: web.WebSocketResponse, data: str):
             MESSAGE_FILE.parent.mkdir(parents=True, exist_ok=True)
             with open(MESSAGE_FILE, "a", encoding="utf-8") as f:
                 f.write(json.dumps({
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "content": content,
                     "type": "user_message"
                 }) + "\n")
@@ -127,7 +135,7 @@ async def handle_ws_message(ws: web.WebSocketResponse, data: str):
             # Acknowledge receipt
             await ws.send_json({
                 "type": "message_received",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
         elif msg_type == "ping":
@@ -167,13 +175,13 @@ async def ws_respond_handler(request: web.Request) -> web.Response:
         await broadcast_to_ws_clients({
             "type": "claude_response",
             "content": content,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
         # Store response
         with open(RESPONSE_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps({
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "content": content
             }) + "\n")
 
@@ -182,23 +190,24 @@ async def ws_respond_handler(request: web.Request) -> web.Response:
             "clients": len(connected_ws_clients)
         })
 
-    except Exception as e:
-        return web.json_response({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("Error in ws_respond_handler")
+        return web.json_response({"error": "Internal server error"}, status=500)
 
 
 async def ws_messages_handler(request: web.Request) -> web.Response:
     """HTTP endpoint for Claude Code to read pending messages."""
     messages = []
 
-    if MESSAGE_FILE.exists():
-        with open(MESSAGE_FILE, encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    with contextlib.suppress(json.JSONDecodeError):
-                        messages.append(json.loads(line))
+    async with _messages_lock:
+        if MESSAGE_FILE.exists():
+            with open(MESSAGE_FILE, encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        with contextlib.suppress(json.JSONDecodeError):
+                            messages.append(json.loads(line))
 
-        # Clear file after reading
-        MESSAGE_FILE.write_text("")
+            MESSAGE_FILE.write_text("")
 
     return web.json_response({
         "messages": messages,
@@ -211,7 +220,7 @@ async def ws_status_handler(request: web.Request) -> web.Response:
     return web.json_response({
         "connected_clients": len(connected_ws_clients),
         "status": "active" if connected_ws_clients else "idle",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
 
 
@@ -220,7 +229,7 @@ async def health_handler(request: web.Request) -> web.Response:
     return web.json_response({
         "status": "healthy",
         "service": "claude-collaborate",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
 
 
@@ -232,7 +241,7 @@ async def cors_middleware(request: web.Request, handler):
     else:
         response = await handler(request)
 
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:8877"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
@@ -240,7 +249,7 @@ async def cors_middleware(request: web.Request, handler):
 
 def create_app() -> web.Application:
     """Create and configure the application."""
-    app = web.Application(middlewares=[cors_middleware])
+    app = web.Application(middlewares=[cors_middleware], client_max_size=1*1024*1024)
 
     # Routes
     app.router.add_get("/", index_handler)

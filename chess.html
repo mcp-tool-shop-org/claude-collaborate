@@ -595,6 +595,8 @@
         let castlingRights = { white: { kingside: true, queenside: true }, black: { kingside: true, queenside: true } };
         let enPassantTarget = null;
         let flipped = false;
+        let gameOver = false;
+        let positionHistory = [];
 
         // DOM elements
         const boardEl = document.getElementById('board');
@@ -614,6 +616,8 @@
             capturedPieces = { white: [], black: [] };
             castlingRights = { white: { kingside: true, queenside: true }, black: { kingside: true, queenside: true } };
             enPassantTarget = null;
+            gameOver = false;
+            positionHistory = [];
             renderBoard();
             updateStatus();
             updateMoveHistory();
@@ -956,6 +960,7 @@
 
         // Event handlers
         function onSquareClick(row, col) {
+            if (gameOver) return;
             const piece = board[row][col];
 
             if (selectedSquare) {
@@ -980,6 +985,7 @@
         }
 
         function onDragStart(e, row, col) {
+            if (gameOver) { e.preventDefault(); return; }
             const piece = board[row][col];
             if (getPieceColor(piece) !== turn) {
                 e.preventDefault();
@@ -999,6 +1005,7 @@
 
         function onDrop(e, toRow, toCol) {
             e.preventDefault();
+            if (gameOver) return;
             if (!selectedSquare) return;
 
             const move = validMoves.find(m => m.row === toRow && m.col === toCol);
@@ -1027,13 +1034,24 @@
         }
 
         function executeMoveInternal(fromRow, fromCol, toRow, toCol, moveInfo, promoteTo = null) {
+            positionHistory.push({
+                board: JSON.parse(JSON.stringify(board)),
+                turn,
+                castlingRights: JSON.parse(JSON.stringify(castlingRights)),
+                enPassantTarget,
+                capturedPieces: JSON.parse(JSON.stringify(capturedPieces)),
+                moveHistory: [...moveHistory],
+                lastMove: lastMove ? JSON.parse(JSON.stringify(lastMove)) : null,
+                gameOver
+            });
+
             const piece = board[fromRow][fromCol];
             const captured = board[toRow][toCol];
             const pieceType = piece.toUpperCase();
             const color = getPieceColor(piece);
 
             // Record move for notation
-            const moveNotation = getMoveNotation(fromRow, fromCol, toRow, toCol, captured, moveInfo, promoteTo);
+            let moveNotation = getMoveNotation(fromRow, fromCol, toRow, toCol, captured, moveInfo, promoteTo);
 
             // Handle castling
             if (moveInfo.castle) {
@@ -1058,6 +1076,10 @@
             // Capture
             if (captured !== '.') {
                 capturedPieces[color].push(captured.toUpperCase());
+                if (toRow === 7 && toCol === 0) castlingRights.white.queenside = false;
+                if (toRow === 7 && toCol === 7) castlingRights.white.kingside = false;
+                if (toRow === 0 && toCol === 0) castlingRights.black.queenside = false;
+                if (toRow === 0 && toCol === 7) castlingRights.black.kingside = false;
             }
 
             // Move piece
@@ -1084,15 +1106,23 @@
             // Record last move
             lastMove = { from: { row: fromRow, col: fromCol }, to: { row: toRow, col: toCol } };
 
+            // Switch turn
+            turn = turn === 'white' ? 'black' : 'white';
+
+            if (isInCheck(turn)) {
+                if (!hasLegalMoves(turn)) {
+                    moveNotation += '#';
+                } else {
+                    moveNotation += '+';
+                }
+            }
+
             // Record move history
             moveHistory.push({
                 notation: moveNotation,
                 from: { row: fromRow, col: fromCol },
                 to: { row: toRow, col: toCol }
             });
-
-            // Switch turn
-            turn = turn === 'white' ? 'black' : 'white';
 
             // Clear selection
             selectedSquare = null;
@@ -1132,10 +1162,29 @@
                 notation += pieceType;
             }
 
-            // Add disambiguation if needed
-            // (simplified - just add file for now)
-            if (pieceType !== 'P') {
-                notation += files[fromCol];
+            if (pieceType !== 'P' && pieceType !== 'K') {
+                const color = getPieceColor(piece);
+                let ambiguous = [];
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (r === fromRow && c === fromCol) continue;
+                        if (board[r][c].toUpperCase() === pieceType && getPieceColor(board[r][c]) === color) {
+                            const moves = getValidMoves(r, c);
+                            if (moves.some(m => m.row === toRow && m.col === toCol)) {
+                                ambiguous.push({ row: r, col: c });
+                            }
+                        }
+                    }
+                }
+                if (ambiguous.length > 0) {
+                    if (ambiguous.every(a => a.col !== fromCol)) {
+                        notation += files[fromCol];
+                    } else if (ambiguous.every(a => a.row !== fromRow)) {
+                        notation += ranks[fromRow];
+                    } else {
+                        notation += files[fromCol] + ranks[fromRow];
+                    }
+                }
             }
 
             if (captured !== '.' || moveInfo.enPassant) {
@@ -1181,6 +1230,7 @@
             document.getElementById('player-black').classList.toggle('active', turn === 'black');
 
             if (!hasLegal) {
+                gameOver = true;
                 if (inCheck) {
                     statusEl.textContent = `Checkmate! ${turn === 'white' ? 'Black' : 'White'} wins!`;
                     statusEl.className = 'status checkmate';
@@ -1256,11 +1306,22 @@
         }
 
         function undoMove() {
-            if (moveHistory.length === 0) return;
-            // For simplicity, just restart the game
-            // A full implementation would need to track all game state
-            alert('Undo not fully implemented yet. Starting new game.');
-            init();
+            if (positionHistory.length === 0) return;
+            const snapshot = positionHistory.pop();
+            board = snapshot.board;
+            turn = snapshot.turn;
+            castlingRights = snapshot.castlingRights;
+            enPassantTarget = snapshot.enPassantTarget;
+            capturedPieces = snapshot.capturedPieces;
+            moveHistory = snapshot.moveHistory;
+            lastMove = snapshot.lastMove;
+            gameOver = snapshot.gameOver;
+            selectedSquare = null;
+            validMoves = [];
+            renderBoard();
+            updateStatus();
+            updateMoveHistory();
+            updateCaptured();
         }
 
         // Start the game

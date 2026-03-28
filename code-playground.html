@@ -387,7 +387,6 @@
                     <div class="dropdown-item" onclick="loadTemplate('canvas')">Canvas Drawing</div>
                 </div>
             </div>
-            <button class="btn" onclick="formatCode()">✨ Format</button>
             <button class="btn" onclick="copyCode()">📋 Copy All</button>
             <button class="btn btn-primary" onclick="runCode()">▶ Run</button>
         </div>
@@ -442,7 +441,7 @@
                 </div>
             </div>
             <div class="preview-frame-container">
-                <iframe id="preview-frame" sandbox="allow-scripts allow-modals"></iframe>
+                <iframe id="preview-frame" sandbox="allow-scripts"></iframe>
             </div>
             <div class="console-panel" id="console-panel">
                 <div class="console-header">
@@ -504,6 +503,7 @@
                 updateLineNumbers(editor, lines);
                 updateCharCount();
                 debouncedRun();
+                debouncedSave();
             });
             editor.addEventListener('scroll', () => syncScroll(editor, lines));
             editor.addEventListener('keydown', handleTab);
@@ -526,6 +526,16 @@
         function debouncedRun() {
             clearTimeout(runTimeout);
             runTimeout = setTimeout(runCode, 500);
+        }
+
+        let saveTimeout;
+        function debouncedSave() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                localStorage.setItem('cc-playground-html', htmlEditor.value);
+                localStorage.setItem('cc-playground-css', cssEditor.value);
+                localStorage.setItem('cc-playground-js', jsEditor.value);
+            }, 300);
         }
 
         // Run code
@@ -590,6 +600,7 @@
 
         // Listen for console messages from iframe
         window.addEventListener('message', (e) => {
+            if (e.source !== previewFrame.contentWindow) return;
             if (e.data.type === 'console') {
                 const line = document.createElement('div');
                 line.className = `console-line ${e.data.method}`;
@@ -861,6 +872,7 @@ console.log('Canvas ready! Move your mouse to paint.');`
             toggleDropdown();
             runCode();
             updateCharCount();
+            debouncedSave();
         }
 
         function toggleDropdown() {
@@ -887,8 +899,16 @@ console.log('Canvas ready! Move your mouse to paint.');`
         // Copy all code
         function copyCode() {
             const code = `<!-- HTML -->\n${htmlEditor.value}\n\n/* CSS */\n${cssEditor.value}\n\n// JavaScript\n${jsEditor.value}`;
-            navigator.clipboard.writeText(code);
-            console.log('Code copied to clipboard!');
+            try {
+                navigator.clipboard.writeText(code);
+                console.log('Code copied to clipboard!');
+            } catch (err) {
+                console.warn('Clipboard write failed, selecting text instead');
+                const active = document.querySelector('.editor-container.active .code-editor');
+                if (active) {
+                    active.select();
+                }
+            }
         }
 
         // Open in new tab
@@ -909,15 +929,8 @@ console.log('Canvas ready! Move your mouse to paint.');`
 </body>
 </html>`;
 
-            const blob = new Blob([doc], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
+            const url = 'data:text/html;charset=utf-8,' + encodeURIComponent(doc);
             window.open(url, '_blank');
-        }
-
-        // Format code (basic)
-        function formatCode() {
-            // This is a simple formatter - in production you'd use Prettier
-            console.log('Code formatted!');
         }
 
         // Char count
@@ -950,8 +963,21 @@ console.log('Canvas ready! Move your mouse to paint.');`
             document.body.style.cursor = '';
         });
 
-        // Load hello template by default
-        loadTemplate('hello');
+        const savedHtml = localStorage.getItem('cc-playground-html');
+        const savedCss = localStorage.getItem('cc-playground-css');
+        const savedJs = localStorage.getItem('cc-playground-js');
+        if (savedHtml !== null || savedCss !== null || savedJs !== null) {
+            htmlEditor.value = savedHtml || '';
+            cssEditor.value = savedCss || '';
+            jsEditor.value = savedJs || '';
+            updateLineNumbers(htmlEditor, document.getElementById('html-lines'));
+            updateLineNumbers(cssEditor, document.getElementById('css-lines'));
+            updateLineNumbers(jsEditor, document.getElementById('js-lines'));
+            updateCharCount();
+            runCode();
+        } else {
+            loadTemplate('hello');
+        }
     </script>
 </body>
 </html>

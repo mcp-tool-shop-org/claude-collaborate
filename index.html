@@ -782,11 +782,9 @@
                 ws.onclose = () => {
                     wsConnected = false;
                     updateConnectionStatus();
-                    // Reconnect after delay
-                    if (wsReconnectAttempts < 5) {
-                        wsReconnectAttempts++;
-                        setTimeout(connectWebSocket, 2000 * wsReconnectAttempts);
-                    }
+                    wsReconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts - 1), 30000);
+                    setTimeout(connectWebSocket, delay);
                 };
 
                 ws.onerror = (error) => {
@@ -812,11 +810,6 @@
             if (data.type === 'claude_response') {
                 // Claude sent a response - display it and optionally speak it
                 addToConversation('Claude', data.content, 'claude');
-                // Auto-speak if voice is ready
-                if (statusDot.classList.contains('connected')) {
-                    speakInput.value = data.content;
-                    speak();
-                }
             } else if (data.type === 'connected') {
                 addToConversation('System', 'Connected to Claude Code bridge!', 'claude');
             } else if (data.type === 'message_received') {
@@ -967,12 +960,13 @@
             // Send via WebSocket to Claude Code bridge
             const sentViaWs = sendToClaudeCode(text);
 
-            // Also copy to clipboard as fallback
-            navigator.clipboard.writeText(text).then(() => {
-                console.log('Message copied to clipboard' + (sentViaWs ? ' (also sent via WebSocket)' : ''));
-            }).catch(err => {
-                console.log('Failed to copy:', err);
-            });
+            if (!wsConnected) {
+                navigator.clipboard.writeText(text).then(() => {
+                    console.log('Message copied to clipboard (WebSocket not connected)');
+                }).catch(err => {
+                    console.log('Failed to copy:', err);
+                });
+            }
         }
 
         // Update connection status display
@@ -1012,10 +1006,13 @@
             const msg = document.createElement('div');
             msg.className = `chat-message ${type}`;
             msg.innerHTML = `
-                <div class="sender">${sender}<span class="message-time">${time}</span></div>
+                <div class="sender">${escapeHtml(sender)}<span class="message-time">${time}</span></div>
                 <div class="message-text">${escapeHtml(text)}</div>
             `;
             conversationPanel.appendChild(msg);
+            while (conversationPanel.children.length > 200) {
+                conversationPanel.removeChild(conversationPanel.firstChild);
+            }
             conversationPanel.scrollTop = conversationPanel.scrollHeight;
         }
 
@@ -1046,6 +1043,13 @@
 
         // Environment switching
         document.querySelectorAll('.env-item').forEach(item => {
+            item.setAttribute('tabindex', '0');
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    item.click();
+                }
+            });
             item.addEventListener('click', () => {
                 document.querySelectorAll('.env-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
@@ -1081,14 +1085,6 @@
         function openInNewTab() {
             window.open(sandboxFrame.src, '_blank');
         }
-
-        // Keyboard shortcuts
-        speakInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                speak();
-            }
-        });
 
         userInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {

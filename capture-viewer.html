@@ -577,17 +577,21 @@
                     }
                 ];
 
-                // Try fetching from API
                 const res = await fetch(`${VOICE_API}/api/captures`).catch(() => null);
                 if (res && res.ok) {
                     const data = await res.json();
-                    captures = data.captures || [];
+                    const raw = data.captures || [];
+                    captures = raw.filter(c => c.name && c.path && c.type);
                 }
             } catch (e) {
                 console.log('Using demo captures');
             }
 
             renderCaptures();
+        }
+
+        function isValidPath(p) {
+            return typeof p === 'string' && !p.includes('..');
         }
 
         function renderCaptures() {
@@ -598,35 +602,65 @@
 
             document.getElementById('capture-count').textContent = filtered.length;
 
+            list.textContent = '';
+
             if (filtered.length === 0) {
-                list.innerHTML = `
-                    <div style="text-align: center; padding: 40px 20px; color: var(--text-dim);">
-                        <div style="font-size: 2rem; margin-bottom: 8px;">&#128247;</div>
-                        <p>No captures yet</p>
-                        <p style="font-size: 0.8rem; margin-top: 8px;">
-                            Take a screenshot or drag files here
-                        </p>
-                    </div>
-                `;
+                const empty = document.createElement('div');
+                empty.style.cssText = 'text-align: center; padding: 40px 20px; color: var(--text-dim);';
+                const icon = document.createElement('div');
+                icon.style.cssText = 'font-size: 2rem; margin-bottom: 8px;';
+                icon.textContent = '\u{1F4F7}';
+                const p1 = document.createElement('p');
+                p1.textContent = 'No captures yet';
+                const p2 = document.createElement('p');
+                p2.style.cssText = 'font-size: 0.8rem; margin-top: 8px;';
+                p2.textContent = 'Take a screenshot or drag files here';
+                empty.appendChild(icon);
+                empty.appendChild(p1);
+                empty.appendChild(p2);
+                list.appendChild(empty);
                 return;
             }
 
-            list.innerHTML = filtered.map((cap, i) => `
-                <div class="capture-item ${selectedCapture === cap ? 'active' : ''}"
-                     onclick="selectCapture(${i})"
-                     oncontextmenu="showContextMenu(event, ${i})">
-                    <div class="capture-thumb">
-                        ${cap.type === 'screenshot'
-                            ? `<img src="file:///${cap.path}" onerror="this.parentElement.innerHTML='&#128444;'">`
-                            : '&#127910;'}
-                    </div>
-                    <div class="capture-info">
-                        <div class="capture-name">${cap.name}</div>
-                        <div class="capture-meta">${formatSize(cap.size)} - ${formatDate(cap.created)}</div>
-                    </div>
-                    <span class="capture-type ${cap.type}">${cap.type === 'screenshot' ? 'IMG' : 'VID'}</span>
-                </div>
-            `).join('');
+            filtered.forEach((cap, i) => {
+                if (!isValidPath(cap.path)) return;
+
+                const item = document.createElement('div');
+                item.className = 'capture-item' + (selectedCapture === cap ? ' active' : '');
+                item.addEventListener('click', () => selectCapture(i));
+                item.addEventListener('contextmenu', (e) => showContextMenu(e, i));
+
+                const thumb = document.createElement('div');
+                thumb.className = 'capture-thumb';
+                if (cap.type === 'screenshot') {
+                    const img = document.createElement('img');
+                    img.src = 'file:///' + cap.path;
+                    img.addEventListener('error', () => { thumb.textContent = '\u{1F5BC}'; });
+                    thumb.appendChild(img);
+                } else {
+                    thumb.textContent = '\u{1F3A6}';
+                }
+
+                const info = document.createElement('div');
+                info.className = 'capture-info';
+                const nameEl = document.createElement('div');
+                nameEl.className = 'capture-name';
+                nameEl.textContent = cap.name;
+                const metaEl = document.createElement('div');
+                metaEl.className = 'capture-meta';
+                metaEl.textContent = formatSize(cap.size) + ' - ' + formatDate(cap.created);
+                info.appendChild(nameEl);
+                info.appendChild(metaEl);
+
+                const typeEl = document.createElement('span');
+                typeEl.className = 'capture-type ' + cap.type;
+                typeEl.textContent = cap.type === 'screenshot' ? 'IMG' : 'VID';
+
+                item.appendChild(thumb);
+                item.appendChild(info);
+                item.appendChild(typeEl);
+                list.appendChild(item);
+            });
         }
 
         function selectCapture(index) {
@@ -644,21 +678,39 @@
             const toolbar = document.getElementById('viewer-toolbar');
 
             if (!cap) {
-                viewer.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">&#128247;</div>
-                        <h3>No capture selected</h3>
-                        <p>Select a capture from the sidebar</p>
-                    </div>
-                `;
+                viewer.textContent = '';
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                const icon = document.createElement('div');
+                icon.className = 'empty-state-icon';
+                icon.textContent = '\u{1F4F7}';
+                const h3 = document.createElement('h3');
+                h3.textContent = 'No capture selected';
+                const p = document.createElement('p');
+                p.textContent = 'Select a capture from the sidebar';
+                empty.appendChild(icon);
+                empty.appendChild(h3);
+                empty.appendChild(p);
+                viewer.appendChild(empty);
                 toolbar.style.display = 'none';
                 return;
             }
 
+            if (!isValidPath(cap.path)) return;
+
+            viewer.textContent = '';
             if (cap.type === 'screenshot') {
-                viewer.innerHTML = `<img src="file:///${cap.path}" id="capture-image" style="transform: scale(${zoomLevel/100})">`;
+                const img = document.createElement('img');
+                img.src = 'file:///' + cap.path;
+                img.id = 'capture-image';
+                img.style.transform = 'scale(' + (zoomLevel / 100) + ')';
+                viewer.appendChild(img);
             } else {
-                viewer.innerHTML = `<video src="file:///${cap.path}" controls id="capture-video"></video>`;
+                const video = document.createElement('video');
+                video.src = 'file:///' + cap.path;
+                video.controls = true;
+                video.id = 'capture-video';
+                viewer.appendChild(video);
             }
 
             // Update info
@@ -682,7 +734,7 @@
         async function takeScreenshot() {
             try {
                 // This would call the MCP screenshot tool
-                alert('Taking screenshot... (requires MCP server restart to use new tools)');
+                showToast('Taking screenshot... (requires MCP server restart to use new tools)');
             } catch (e) {
                 console.error('Screenshot failed:', e);
             }
@@ -690,30 +742,37 @@
 
         function openSnippingTool() {
             // Trigger Win+Shift+S
-            alert('Opening Snipping Tool... (Win+Shift+S)');
+            showToast('Opening Snipping Tool... (Win+Shift+S)');
         }
 
         function refreshCaptures() {
             loadCaptures();
         }
 
-        function copyToClipboard() {
+        async function copyToClipboard() {
             if (!selectedCapture) return;
-            // For images, we'd use the clipboard API
-            navigator.clipboard.writeText(selectedCapture.path);
-            showToast('Path copied to clipboard');
+            try {
+                await navigator.clipboard.writeText(selectedCapture.path);
+                showToast('Path copied to clipboard');
+            } catch (e) {
+                showToast('Failed to copy to clipboard');
+            }
         }
 
-        function copyPath() {
+        async function copyPath() {
             if (!selectedCapture) return;
-            navigator.clipboard.writeText(selectedCapture.path);
-            showToast('Path copied');
+            try {
+                await navigator.clipboard.writeText(selectedCapture.path);
+                showToast('Path copied');
+            } catch (e) {
+                showToast('Failed to copy path');
+            }
         }
 
         function openInExplorer() {
             if (!selectedCapture) return;
             // This would open the folder in Windows Explorer
-            alert(`Would open: ${CAPTURES_DIR}`);
+            showToast('Would open: ' + CAPTURES_DIR);
         }
 
         function deleteCapture() {

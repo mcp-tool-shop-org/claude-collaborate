@@ -478,15 +478,12 @@
         let brushSize = 4;
         let strokes = [];
         let currentStroke = [];
-        let undoStack = [];
         let redoStack = [];
         let zoom = 1;
-        let panX = 0, panY = 0;
+        const MAX_STROKES = 500;
         let startX, startY;
         let shapeMode = null;
         let textPosition = null;
-        let stickyNotes = [];
-
         // Resize canvas
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -498,8 +495,10 @@
 
         // Drawing functions
         function startDrawing(e) {
+            const rect = canvas.getBoundingClientRect();
+
             if (shapeMode === 'text') {
-                textPosition = { x: e.clientX, y: e.clientY };
+                textPosition = { x: (e.clientX - rect.left) / zoom, y: (e.clientY - rect.top) / zoom };
                 document.getElementById('text-modal').classList.add('active');
                 document.getElementById('text-input').focus();
                 return;
@@ -511,8 +510,8 @@
             }
 
             isDrawing = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            startX = (e.clientX - rect.left) / zoom;
+            startY = (e.clientY - rect.top) / zoom;
             currentStroke = [{ x: startX, y: startY }];
 
             if (currentTool === 'pen' && !shapeMode) {
@@ -526,16 +525,15 @@
         }
 
         function draw(e) {
-            // Update cursor position
-            document.getElementById('cursor-pos').textContent = `${e.clientX}, ${e.clientY}`;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / zoom;
+            const y = (e.clientY - rect.top) / zoom;
+
+            document.getElementById('cursor-pos').textContent = `${Math.round(x)}, ${Math.round(y)}`;
 
             if (!isDrawing) return;
 
-            const x = e.clientX;
-            const y = e.clientY;
-
             if (shapeMode) {
-                // Preview shape
                 redraw();
                 ctx.strokeStyle = currentColor;
                 ctx.lineWidth = brushSize;
@@ -545,7 +543,6 @@
                     ctx.beginPath();
                     ctx.moveTo(startX, startY);
                     if (e.shiftKey) {
-                        // Snap to 45 degree angles
                         const angle = Math.atan2(y - startY, x - startX);
                         const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
                         const dist = Math.hypot(x - startX, y - startY);
@@ -575,6 +572,7 @@
                 ctx.arc(x, y, brushSize * 2, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
+                currentStroke.push({ x, y });
             }
         }
 
@@ -582,18 +580,25 @@
             if (!isDrawing) return;
             isDrawing = false;
 
-            const x = e.clientX;
-            const y = e.clientY;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / zoom;
+            const y = (e.clientY - rect.top) / zoom;
 
             if (shapeMode) {
-                // Save shape as stroke
+                let endX = x, endY = y;
+                if (e.shiftKey && (shapeMode === 'line' || shapeMode === 'arrow')) {
+                    const angle = Math.atan2(y - startY, x - startX);
+                    const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+                    const dist = Math.hypot(x - startX, y - startY);
+                    endX = startX + Math.cos(snapAngle) * dist;
+                    endY = startY + Math.sin(snapAngle) * dist;
+                }
                 strokes.push({
                     type: shapeMode,
                     startX, startY,
-                    endX: x, endY: y,
+                    endX, endY,
                     color: currentColor,
-                    size: brushSize,
-                    shift: e.shiftKey
+                    size: brushSize
                 });
             } else if (currentTool === 'pen' && currentStroke.length > 1) {
                 strokes.push({
@@ -602,6 +607,16 @@
                     color: currentColor,
                     size: brushSize
                 });
+            } else if (currentTool === 'eraser' && currentStroke.length > 1) {
+                strokes.push({
+                    type: 'eraser',
+                    points: [...currentStroke],
+                    size: brushSize
+                });
+            }
+
+            if (strokes.length > MAX_STROKES) {
+                strokes.splice(0, strokes.length - MAX_STROKES);
             }
 
             currentStroke = [];
@@ -654,6 +669,22 @@
                     ctx.stroke();
                 } else if (stroke.type === 'arrow') {
                     drawArrow(stroke.startX, stroke.startY, stroke.endX, stroke.endY);
+                } else if (stroke.type === 'eraser') {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.beginPath();
+                    stroke.points.forEach((p, i) => {
+                        if (i === 0) {
+                            ctx.moveTo(p.x, p.y);
+                        } else {
+                            ctx.lineTo(p.x, p.y);
+                        }
+                    });
+                    ctx.lineWidth = stroke.size * 4;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.stroke();
+                    ctx.restore();
                 } else if (stroke.type === 'text') {
                     ctx.font = `${stroke.size * 4}px sans-serif`;
                     ctx.fillStyle = stroke.color;
@@ -734,7 +765,6 @@
                 strokes = [];
                 redoStack = [];
                 document.querySelectorAll('.sticky-note').forEach(n => n.remove());
-                stickyNotes = [];
                 redraw();
                 updateStrokeCount();
             }
@@ -742,6 +772,7 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.isContentEditable) return;
             if (e.ctrlKey && e.key === 'z') {
                 e.preventDefault();
                 document.getElementById('undo-btn').click();
@@ -791,15 +822,13 @@
             note.style.left = x + 'px';
             note.style.top = y + 'px';
             note.contentEditable = true;
-            note.innerHTML = 'Click to edit...';
+            note.textContent = 'Click to edit...';
 
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-note';
             deleteBtn.textContent = '×';
-            deleteBtn.onclick = () => note.remove();
             note.appendChild(deleteBtn);
 
-            // Dragging
             let isDragging = false;
             let offsetX, offsetY;
 
@@ -810,16 +839,25 @@
                 offsetY = e.clientY - note.offsetTop;
             });
 
-            document.addEventListener('mousemove', (e) => {
+            const onMouseMove = (e) => {
                 if (isDragging) {
                     note.style.left = (e.clientX - offsetX) + 'px';
                     note.style.top = (e.clientY - offsetY) + 'px';
                 }
-            });
+            };
 
-            document.addEventListener('mouseup', () => {
+            const onMouseUp = () => {
                 isDragging = false;
-            });
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+
+            deleteBtn.onclick = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                note.remove();
+            };
 
             document.body.appendChild(note);
             stickyColorIndex++;

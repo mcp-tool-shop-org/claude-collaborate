@@ -5,7 +5,7 @@ Thank you for your interest in contributing! This project provides collaborative
 ## Development Setup
 
 ```bash
-git clone https://github.com/mcp-tool-shop/claude-collaborate.git
+git clone https://github.com/mcp-tool-shop-org/claude-collaborate.git
 cd claude-collaborate
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
@@ -20,7 +20,7 @@ Start the development server:
 python server.py
 ```
 
-Then open your browser to `http://localhost:8000`
+Then open your browser to `http://localhost:8877`
 
 ## How to Contribute
 
@@ -28,7 +28,7 @@ Then open your browser to `http://localhost:8000`
 
 If you find a bug or have a feature request:
 
-1. Check existing [issues](https://github.com/mcp-tool-shop/claude-collaborate/issues)
+1. Check existing [issues](https://github.com/mcp-tool-shop-org/claude-collaborate/issues)
 2. If not found, create a new issue with:
    - Clear description of the problem or feature
    - Steps to reproduce (for bugs)
@@ -59,7 +59,7 @@ If you find a bug or have a feature request:
 
 ```
 claude-collaborate/
-├── server.py              # Main Flask server
+├── server.py              # Main aiohttp server
 ├── ws_bridge.py           # WebSocket bridge
 ├── index.html             # Landing page
 ├── adventures/            # Adventure mode files
@@ -152,7 +152,7 @@ python -m pytest tests/
 
 ```javascript
 // Client-side
-const ws = new WebSocket('ws://localhost:8000/ws');
+const ws = new WebSocket('ws://localhost:8877/ws');
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     // Handle message
