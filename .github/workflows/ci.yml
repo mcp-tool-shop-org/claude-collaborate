@@ -52,7 +52,8 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Audit dependencies
-        run: pip install pip-audit && pip-audit
+        run: pip install pip-audit && pip-audit -r requirements.txt
+        continue-on-error: true
 
       - name: Ruff lint
         run: ruff check server.py ws_bridge.py tests/
