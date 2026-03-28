@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src ws://localhost:8877 ws://localhost:8878 http://localhost:8877 http://localhost:8878; frame-src 'self' blob:;">
     <title>Code Workshop</title>
+    <link rel="stylesheet" href="collaborate-base.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -85,6 +92,17 @@
         .btn-primary:hover {
             background: #2ea043;
             border-color: #2ea043;
+        }
+
+        .shortcut-hint {
+            font-size: 0.7rem;
+            opacity: 0.85;
+            margin-left: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            letter-spacing: 0.3px;
         }
 
         /* Main Layout */
@@ -177,25 +195,77 @@
             text-align: right;
             user-select: none;
             overflow: hidden;
+            white-space: pre;
+            z-index: 3;
+        }
+
+        /* Syntax highlighting layer */
+        .highlight-layer {
+            position: absolute;
+            top: 0;
+            left: 50px;
+            right: 0;
+            bottom: 0;
+            padding: 12px 12px 12px 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow: auto;
+            z-index: 1;
+            pointer-events: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: var(--bg-editor);
+            margin: 0;
+            border: none;
+            border-radius: 0;
+        }
+
+        .highlight-layer code {
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+            background: none !important;
+            padding: 0 !important;
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: block;
         }
 
         .code-editor {
-            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 50px;
+            right: 0;
+            bottom: 0;
+            width: calc(100% - 50px);
             height: 100%;
-            padding: 12px 12px 12px 62px;
-            background: var(--bg-editor);
+            padding: 12px 12px 12px 12px;
+            background: transparent;
             border: none;
-            color: var(--text);
+            color: transparent;
+            caret-color: var(--text);
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 14px;
             line-height: 1.5;
             resize: none;
             outline: none;
             tab-size: 2;
+            z-index: 2;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: auto;
         }
 
         .code-editor::placeholder {
             color: var(--text-dim);
+        }
+
+        /* Override Prism background for our theme */
+        .highlight-layer[class*="language-"],
+        .highlight-layer code[class*="language-"] {
+            background: none !important;
         }
 
         /* Preview Panel */
@@ -289,10 +359,10 @@
             opacity: 0.5;
         }
 
-        .console-line.log::before { content: '›'; }
-        .console-line.error::before { content: '✕'; color: var(--red); }
-        .console-line.warn::before { content: '⚠'; color: var(--orange); }
-        .console-line.info::before { content: 'ℹ'; color: var(--accent); }
+        .console-line.log::before { content: '\203A'; }
+        .console-line.error::before { content: '\2715'; color: var(--red); }
+        .console-line.warn::before { content: '\26A0'; color: var(--orange); }
+        .console-line.info::before { content: '\2139'; color: var(--accent); }
 
         /* Resizer */
         .resizer {
@@ -365,18 +435,43 @@
             align-items: center;
             gap: 6px;
         }
+
+        /* Save feedback toast */
+        .save-toast {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: var(--green);
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+
+        .save-toast.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
+    <noscript><p style="color:#e0e0e0;text-align:center;padding:40px;font-family:system-ui">This tool requires JavaScript to run.</p></noscript>
+    <div class="save-toast" id="save-toast">Saved!</div>
     <header>
         <div class="title">
-            <span class="title-icon">💻</span>
+            <span class="title-icon">&#128187;</span>
             <span>Code Workshop</span>
         </div>
         <div class="header-actions">
             <div class="dropdown" id="templates-dropdown">
-                <button class="btn" onclick="toggleDropdown()">
-                    📋 Templates
+                <button class="btn" onclick="toggleDropdown()" aria-label="Templates menu">
+                    &#128203; Templates
                 </button>
                 <div class="dropdown-content">
                     <div class="dropdown-item" onclick="loadTemplate('blank')">Blank</div>
@@ -387,8 +482,9 @@
                     <div class="dropdown-item" onclick="loadTemplate('canvas')">Canvas Drawing</div>
                 </div>
             </div>
-            <button class="btn" onclick="copyCode()">📋 Copy All</button>
-            <button class="btn btn-primary" onclick="runCode()">▶ Run</button>
+            <button class="btn" onclick="copyCode()" aria-label="Copy all code">&#128203; Copy All</button>
+            <button class="btn" onclick="saveCode()" aria-label="Save code, Ctrl+S">&#128190; Save <span class="shortcut-hint">Ctrl+S</span></button>
+            <button class="btn btn-primary" onclick="runCode()" aria-label="Run code, Ctrl+Enter">&#9654; Run <span class="shortcut-hint">Ctrl+Enter</span></button>
         </div>
     </header>
 
@@ -397,10 +493,10 @@
         <div class="editors-panel" id="editors-panel">
             <div class="tabs">
                 <button class="tab active" data-tab="html">
-                    <span class="tab-icon html">◢</span> HTML
+                    <span class="tab-icon html">&#9698;</span> HTML
                 </button>
                 <button class="tab" data-tab="css">
-                    <span class="tab-icon css">◆</span> CSS
+                    <span class="tab-icon css">&#9670;</span> CSS
                 </button>
                 <button class="tab" data-tab="js">
                     <span class="tab-icon js">{ }</span> JS
@@ -410,21 +506,24 @@
             <div class="editor-container active" data-editor="html">
                 <div class="editor-wrapper">
                     <div class="line-numbers" id="html-lines">1</div>
-                    <textarea class="code-editor" id="html-editor" placeholder="Write HTML here..." spellcheck="false"></textarea>
+                    <pre class="highlight-layer" id="html-highlight" aria-hidden="true"><code class="language-markup"></code></pre>
+                    <textarea class="code-editor" id="html-editor" placeholder="Write HTML here..." spellcheck="false" aria-label="HTML editor"></textarea>
                 </div>
             </div>
 
             <div class="editor-container" data-editor="css">
                 <div class="editor-wrapper">
                     <div class="line-numbers" id="css-lines">1</div>
-                    <textarea class="code-editor" id="css-editor" placeholder="Write CSS here..." spellcheck="false"></textarea>
+                    <pre class="highlight-layer" id="css-highlight" aria-hidden="true"><code class="language-css"></code></pre>
+                    <textarea class="code-editor" id="css-editor" placeholder="Write CSS here..." spellcheck="false" aria-label="CSS editor"></textarea>
                 </div>
             </div>
 
             <div class="editor-container" data-editor="js">
                 <div class="editor-wrapper">
                     <div class="line-numbers" id="js-lines">1</div>
-                    <textarea class="code-editor" id="js-editor" placeholder="Write JavaScript here..." spellcheck="false"></textarea>
+                    <pre class="highlight-layer" id="js-highlight" aria-hidden="true"><code class="language-javascript"></code></pre>
+                    <textarea class="code-editor" id="js-editor" placeholder="Write JavaScript here..." spellcheck="false" aria-label="JavaScript editor"></textarea>
                 </div>
             </div>
         </div>
@@ -434,10 +533,10 @@
         <!-- Preview -->
         <div class="preview-panel" id="preview-panel">
             <div class="preview-header">
-                <h3>👁️ Preview</h3>
+                <h3>&#128065;&#65039; Preview</h3>
                 <div class="preview-actions">
-                    <button class="btn" onclick="toggleConsole()">🖥️ Console</button>
-                    <button class="btn" onclick="openInNewTab()">↗ Open</button>
+                    <button class="btn" onclick="toggleConsole()">&#128421;&#65039; Console</button>
+                    <button class="btn" onclick="openInNewTab()">&#8599; Open</button>
                 </div>
             </div>
             <div class="preview-frame-container">
@@ -445,7 +544,7 @@
             </div>
             <div class="console-panel" id="console-panel">
                 <div class="console-header">
-                    <h4>🖥️ Console</h4>
+                    <h4>&#128421;&#65039; Console</h4>
                     <button class="btn" onclick="clearConsole()" style="padding: 4px 8px; font-size: 0.75rem;">Clear</button>
                 </div>
                 <div class="console-output" id="console-output"></div>
@@ -470,6 +569,20 @@
         const previewFrame = document.getElementById('preview-frame');
         const consoleOutput = document.getElementById('console-output');
 
+        // Highlight elements
+        const htmlHighlight = document.querySelector('#html-highlight code');
+        const cssHighlight = document.querySelector('#css-highlight code');
+        const jsHighlight = document.querySelector('#js-highlight code');
+
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+        // Update shortcut hints for Mac
+        if (isMac) {
+            document.querySelectorAll('.shortcut-hint').forEach(hint => {
+                hint.textContent = hint.textContent.replace('Ctrl', '\u2318');
+            });
+        }
+
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -486,7 +599,27 @@
         // Line numbers
         function updateLineNumbers(editor, linesEl) {
             const lines = editor.value.split('\n').length;
-            linesEl.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+            linesEl.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+        }
+
+        // Syntax highlighting
+        let highlightTimeout;
+        function updateHighlight(editor, codeEl, language) {
+            // The code element text must end with a newline to keep textarea and pre in sync
+            const text = editor.value;
+            codeEl.textContent = text + (text.endsWith('\n') ? ' ' : '\n');
+            Prism.highlightElement(codeEl);
+        }
+
+        function debouncedHighlight(editor, codeEl, language) {
+            clearTimeout(highlightTimeout);
+            highlightTimeout = setTimeout(() => updateHighlight(editor, codeEl, language), 150);
+        }
+
+        // Sync scroll between textarea and highlight pre
+        function syncHighlightScroll(editor, preEl) {
+            preEl.scrollTop = editor.scrollTop;
+            preEl.scrollLeft = editor.scrollLeft;
         }
 
         // Sync scroll for line numbers
@@ -494,18 +627,24 @@
             linesEl.scrollTop = editor.scrollTop;
         }
 
-        [
-            [htmlEditor, document.getElementById('html-lines')],
-            [cssEditor, document.getElementById('css-lines')],
-            [jsEditor, document.getElementById('js-lines')]
-        ].forEach(([editor, lines]) => {
+        const editorConfigs = [
+            [htmlEditor, document.getElementById('html-lines'), htmlHighlight, document.getElementById('html-highlight'), 'markup'],
+            [cssEditor, document.getElementById('css-lines'), cssHighlight, document.getElementById('css-highlight'), 'css'],
+            [jsEditor, document.getElementById('js-lines'), jsHighlight, document.getElementById('js-highlight'), 'javascript']
+        ];
+
+        editorConfigs.forEach(([editor, lines, codeEl, preEl, lang]) => {
             editor.addEventListener('input', () => {
                 updateLineNumbers(editor, lines);
                 updateCharCount();
                 debouncedRun();
                 debouncedSave();
+                debouncedHighlight(editor, codeEl, lang);
             });
-            editor.addEventListener('scroll', () => syncScroll(editor, lines));
+            editor.addEventListener('scroll', () => {
+                syncScroll(editor, lines);
+                syncHighlightScroll(editor, preEl);
+            });
             editor.addEventListener('keydown', handleTab);
         });
 
@@ -521,6 +660,36 @@
             }
         }
 
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            const mod = isMac ? e.metaKey : e.ctrlKey;
+            if (mod && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            } else if (mod && e.key === 's') {
+                e.preventDefault();
+                saveCode();
+            }
+        });
+
+        // Save with feedback
+        function saveCode() {
+            const toast = document.getElementById('save-toast');
+            try {
+                localStorage.setItem('cc-playground-html', htmlEditor.value);
+                localStorage.setItem('cc-playground-css', cssEditor.value);
+                localStorage.setItem('cc-playground-js', jsEditor.value);
+                // Show save toast
+                toast.textContent = 'Saved!';
+                toast.classList.add('visible');
+                setTimeout(() => toast.classList.remove('visible'), 1200);
+            } catch (e) {
+                toast.textContent = e.name === 'QuotaExceededError' ? 'Storage full!' : 'Save failed!';
+                toast.classList.add('visible');
+                setTimeout(() => toast.classList.remove('visible'), 2000);
+            }
+        }
+
         // Debounced run
         let runTimeout;
         function debouncedRun() {
@@ -532,9 +701,16 @@
         function debouncedSave() {
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
-                localStorage.setItem('cc-playground-html', htmlEditor.value);
-                localStorage.setItem('cc-playground-css', cssEditor.value);
-                localStorage.setItem('cc-playground-js', jsEditor.value);
+                try {
+                    localStorage.setItem('cc-playground-html', htmlEditor.value);
+                    localStorage.setItem('cc-playground-css', cssEditor.value);
+                    localStorage.setItem('cc-playground-js', jsEditor.value);
+                } catch (e) {
+                    const toast = document.getElementById('save-toast');
+                    toast.textContent = e.name === 'QuotaExceededError' ? 'Storage full!' : 'Save failed!';
+                    toast.classList.add('visible');
+                    setTimeout(() => toast.classList.remove('visible'), 2000);
+                }
             }, 300);
         }
 
@@ -545,7 +721,7 @@
             const js = jsEditor.value;
 
             // Clear console
-            consoleOutput.innerHTML = '';
+            consoleOutput.textContent = '';
 
             // Create the preview document
             const doc = `
@@ -572,7 +748,7 @@
                             return String(a);
                         }
                     })
-                }, '*');
+                }, location.origin);
                 originalConsole[method](...args);
             };
         });
@@ -583,7 +759,7 @@
                 type: 'console',
                 method: 'error',
                 args: [msg + ' (line ' + line + ')']
-            }, '*');
+            }, location.origin);
         };
 
         try {
@@ -601,7 +777,12 @@
         // Listen for console messages from iframe
         window.addEventListener('message', (e) => {
             if (e.source !== previewFrame.contentWindow) return;
+            if (e.origin !== 'null' && e.origin !== location.origin) return; // srcdoc iframes have origin 'null'
             if (e.data.type === 'console') {
+                // Cap console entries at 500 to prevent page freeze
+                while (consoleOutput.children.length >= 500) {
+                    consoleOutput.removeChild(consoleOutput.firstChild);
+                }
                 const line = document.createElement('div');
                 line.className = `console-line ${e.data.method}`;
                 line.textContent = e.data.args.join(' ');
@@ -869,6 +1050,11 @@ console.log('Canvas ready! Move your mouse to paint.');`
             updateLineNumbers(cssEditor, document.getElementById('css-lines'));
             updateLineNumbers(jsEditor, document.getElementById('js-lines'));
 
+            // Update highlights
+            updateHighlight(htmlEditor, htmlHighlight, 'markup');
+            updateHighlight(cssEditor, cssHighlight, 'css');
+            updateHighlight(jsEditor, jsHighlight, 'javascript');
+
             toggleDropdown();
             runCode();
             updateCharCount();
@@ -893,7 +1079,7 @@ console.log('Canvas ready! Move your mouse to paint.');`
         }
 
         function clearConsole() {
-            consoleOutput.innerHTML = '';
+            consoleOutput.textContent = '';
         }
 
         // Copy all code
@@ -912,7 +1098,12 @@ console.log('Canvas ready! Move your mouse to paint.');`
         }
 
         // Open in new tab
+        // INTENTIONAL ESCAPE HATCH: This opens user-authored code outside the
+        // sandboxed iframe so it can access APIs (clipboard, fullscreen, etc.)
+        // that the sandbox restricts. The code is authored by the same user who
+        // clicks "Open", so there is no privilege escalation concern.
         function openInNewTab() {
+            console.warn('[Code Workshop] Opening user code in a new tab outside the sandbox. Code will run with full page privileges.');
             const html = htmlEditor.value;
             const css = cssEditor.value;
             const js = jsEditor.value;
@@ -963,6 +1154,12 @@ console.log('Canvas ready! Move your mouse to paint.');`
             document.body.style.cursor = '';
         });
 
+        document.addEventListener('mouseleave', () => {
+            isResizing = false;
+            document.body.style.cursor = '';
+        });
+
+        // Initialize from saved or default
         const savedHtml = localStorage.getItem('cc-playground-html');
         const savedCss = localStorage.getItem('cc-playground-css');
         const savedJs = localStorage.getItem('cc-playground-js');
@@ -973,6 +1170,9 @@ console.log('Canvas ready! Move your mouse to paint.');`
             updateLineNumbers(htmlEditor, document.getElementById('html-lines'));
             updateLineNumbers(cssEditor, document.getElementById('css-lines'));
             updateLineNumbers(jsEditor, document.getElementById('js-lines'));
+            updateHighlight(htmlEditor, htmlHighlight, 'markup');
+            updateHighlight(cssEditor, cssHighlight, 'css');
+            updateHighlight(jsEditor, jsHighlight, 'javascript');
             updateCharCount();
             runCode();
         } else {

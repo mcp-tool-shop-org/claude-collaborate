@@ -1,28 +1,15 @@
-"""Tests for ws_bridge.py HTTP endpoints — health, post_response, get_messages."""
+"""Tests for ws_bridge.py HTTP endpoints -- health, post_response, get_messages."""
 
 from __future__ import annotations
-
-import pytest
-from aiohttp.test_utils import TestClient, TestServer
-
-from ws_bridge import create_app
-
-
-@pytest.fixture
-async def client():
-    app = create_app()
-    async with TestClient(TestServer(app)) as c:
-        yield c
-
 
 # =============================================================================
 # Health check
 # =============================================================================
 
 
-async def test_health_check_returns_200(client):
+async def test_health_check_returns_200(bridge_client):
     """GET /health returns 200 with JSON containing 'status'."""
-    resp = await client.get("/health")
+    resp = await bridge_client.get("/health")
     assert resp.status == 200
     body = await resp.json()
     assert "status" in body
@@ -33,9 +20,9 @@ async def test_health_check_returns_200(client):
 # =============================================================================
 
 
-async def test_post_response_valid_json(client):
+async def test_post_response_valid_json(bridge_client):
     """POST /api/respond with valid content returns 200."""
-    resp = await client.post(
+    resp = await bridge_client.post(
         "/api/respond",
         json={"content": "Test response from Claude"},
     )
@@ -44,9 +31,9 @@ async def test_post_response_valid_json(client):
     assert body.get("status") == "sent"
 
 
-async def test_post_response_invalid_json(client):
+async def test_post_response_invalid_json(bridge_client):
     """POST /api/respond with non-JSON body returns 500."""
-    resp = await client.post(
+    resp = await bridge_client.post(
         "/api/respond",
         data=b"not json",
         headers={"Content-Type": "application/json"},
@@ -59,9 +46,9 @@ async def test_post_response_invalid_json(client):
 # =============================================================================
 
 
-async def test_get_messages_returns_array(client):
+async def test_get_messages_returns_array(bridge_client):
     """GET /api/messages returns 200 with messages array."""
-    resp = await client.get("/api/messages")
+    resp = await bridge_client.get("/api/messages")
     assert resp.status == 200
     body = await resp.json()
     assert isinstance(body.get("messages"), list)

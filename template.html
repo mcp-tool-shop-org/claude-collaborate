@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self';">
     <title>New Environment Template</title>
+    <link rel="stylesheet" href="collaborate-base.css">
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -306,6 +308,7 @@
     </style>
 </head>
 <body>
+    <noscript><p style="color:#e0e0e0;text-align:center;padding:40px;font-family:system-ui">This tool requires JavaScript to run.</p></noscript>
     <header class="header">
         <h1>
             <span class="header-icon">+</span>
@@ -417,6 +420,9 @@
         canvas.addEventListener('mouseleave', () => isDrawing = false);
 
         function addDot(e) {
+            // Cap active dots at 100 to prevent memory leaks
+            if (dots.length >= 100) return;
+
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
@@ -441,7 +447,10 @@
             setTimeout(() => {
                 dot.style.transition = 'opacity 0.5s';
                 dot.style.opacity = '0';
-                setTimeout(() => dot.remove(), 500);
+                setTimeout(() => {
+                    dot.remove();
+                    dots = dots.filter(d => d !== dot);
+                }, 500);
             }, 2000);
         }
 
@@ -456,8 +465,11 @@
         // Copy template to clipboard
         function copyTemplate() {
             const template = document.documentElement.outerHTML;
+            const btn = document.querySelector('button[onclick="copyTemplate()"]');
             navigator.clipboard.writeText(template).then(() => {
-                alert('Template copied to clipboard!');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = originalText; }, 2000);
             });
         }
 

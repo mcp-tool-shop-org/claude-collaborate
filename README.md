@@ -76,20 +76,45 @@ claude-collaborate/
 └── site/                # Starlight handbook
 ```
 
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CC_PORT` | `8877` | Main server port |
+| `CC_HOST` | `127.0.0.1` | Main server bind address |
+| `CC_MAX_CLIENTS` | `50` | Maximum concurrent WebSocket connections |
+| `CC_MAX_MESSAGE_SIZE` | `65536` | Maximum WebSocket message size in bytes |
+| `WS_BRIDGE_PORT` | `8878` | Standalone bridge port (`ws_bridge.py`) |
+| `WS_BRIDGE_HOST` | `127.0.0.1` | Standalone bridge bind address |
+
 ## 🔌 WebSocket Protocol
 
-Claude Collaborate includes a WebSocket bridge for real-time communication with Claude Code:
+Claude Collaborate includes a WebSocket bridge for real-time communication with Claude Code.
 
-```javascript
-// Browser sends to Claude
-{ "type": "user_message", "content": "Hello!" }
+**Client -> Server message types:**
 
-// Claude responds
-{ "type": "claude_response", "content": "Hi there!" }
+| Type | Description |
+|------|-------------|
+| `user_message` | Chat message from the browser (`content` field) |
+| `typing_start` | Typing indicator broadcast to other clients |
+| `typing_stop` | End typing indicator broadcast |
+| `resume` | Reconnection: send `session_id` + `last_seen_seq` to replay missed messages |
+| `ping` | Keepalive; server replies with `pong` |
 
-// Connection status
-{ "type": "connected", "message": "Connected to Claude Collaborate Bridge" }
-```
+**Server -> Client message types:**
+
+| Type | Description |
+|------|-------------|
+| `connected` | Welcome message with `session_id` on connect |
+| `message_received` | Ack after `user_message` is persisted (includes `message_id`, `seq`) |
+| `claude_response` | Full response broadcast from Claude Code via `POST /api/ws/respond` |
+| `resume_complete` | Confirms reconnection; includes `replayed` count |
+| `replay` | Missed message replayed during reconnection |
+| `typing_start` / `typing_stop` | Ephemeral typing indicators from other clients |
+| `pong` | Reply to `ping` |
+| `error` | Error with human-readable `message` field |
+
+All sequenced messages carry a monotonic `seq` field. The server maintains a 500-entry ring buffer for reconnection replay.
 
 ## 🔗 API Endpoints
 
@@ -101,6 +126,13 @@ Claude Collaborate includes a WebSocket bridge for real-time communication with 
 | `/api/ws/messages` | GET | Read pending user messages |
 | `/api/ws/respond` | POST | Send response to browser |
 | `/api/ws/status` | GET | WebSocket bridge status |
+| `/api/ws/typing` | POST | Broadcast typing indicator (`status`: start/stop) |
+| `/api/ws/stream` | POST | Stream chunked response (`message_id`, `chunk`, `done`) |
+| `/api/sessions` | GET | Active WebSocket sessions |
+| `/api/history` | GET | Message history ring buffer (non-destructive, `?limit=N`) |
+| `/api/metrics` | GET | Server metrics (uptime, message counts, client count) |
+| `/adventures` | GET | List adventure files |
+| `/adventures/{filename}` | GET | Serve specific adventure file |
 | `/health` | GET | Server health check |
 
 ## 💬 For Claude Code Users
@@ -146,7 +178,7 @@ python -m voice_soundboard.web_server
 
 ## 📋 Requirements
 
-- Python 3.10+
+- Python 3.11+
 - aiohttp
 - Modern browser with WebSocket support
 
@@ -177,11 +209,11 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 | Category | Score |
 |----------|-------|
 | Security | 10/10 |
-| Error Handling | 10/10 |
+| Error Handling | 8/10 |
 | Operator Docs | 10/10 |
-| Shipping Hygiene | 10/10 |
+| Shipping Hygiene | 8/10 |
 | Identity | 10/10 |
-| **Overall** | **50/50** |
+| **Overall** | **46/50** |
 
 ---
 

@@ -3,7 +3,8 @@
 > Score a repo before remediation. Fill this out first, then use SHIP_GATE.md to fix.
 
 **Repo:** claude-collaborate
-**Date:** 2026-02-27
+**Date:** 2026-03-28
+**Note:** Scores reflect post-v1.0.4 remediation.
 **Type tags:** [all]
 
 ## Pre-Remediation Assessment
@@ -36,8 +37,8 @@
 | Category | Before | After |
 |----------|--------|-------|
 | A. Security | 5/10 | 10/10 |
-| B. Error Handling | 7/10 | 10/10 |
+| B. Error Handling | 7/10 | 8/10 |
 | C. Operator Docs | 8/10 | 10/10 |
-| D. Shipping Hygiene | 6/10 | 10/10 |
+| D. Shipping Hygiene | 6/10 | 8/10 |
 | E. Identity (soft) | 10/10 | 10/10 |
-| **Overall** | **36/50** | **50/50** |
+| **Overall** | **36/50** | **46/50** |

@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' https://img.shields.io;">
     <title>GitHub Toolkit</title>
+    <link rel="stylesheet" href="collaborate-base.css">
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -385,6 +387,7 @@
     </style>
 </head>
 <body>
+    <noscript><p style="color:#e0e0e0;text-align:center;padding:40px;font-family:system-ui">This tool requires JavaScript to run.</p></noscript>
     <header class="header">
         <h1>
             <span>&#128025;</span>
@@ -415,10 +418,10 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('readme')">README Generator</button>
-            <button class="tab" onclick="showTab('badges')">Badge Builder</button>
-            <button class="tab" onclick="showTab('checklist')">Launch Checklist</button>
-            <button class="tab" onclick="showTab('marketing')">Marketing Copy</button>
+            <button class="tab active" data-tab="readme" onclick="showTab('readme')">README Generator</button>
+            <button class="tab" data-tab="badges" onclick="showTab('badges')">Badge Builder</button>
+            <button class="tab" data-tab="checklist" onclick="showTab('checklist')">Launch Checklist</button>
+            <button class="tab" data-tab="marketing" onclick="showTab('marketing')">Marketing Copy</button>
         </div>
 
         <!-- README Generator -->
@@ -506,31 +509,31 @@ MIT
 
                 <div class="section-title">Version & Downloads</div>
                 <div class="badge-grid">
-                    <div class="badge" onclick="copyBadge('version')">![Version](https://img.shields.io/pypi/v/PROJECT)</div>
-                    <div class="badge" onclick="copyBadge('downloads')">![Downloads](https://img.shields.io/pypi/dm/PROJECT)</div>
-                    <div class="badge" onclick="copyBadge('python')">![Python](https://img.shields.io/pypi/pyversions/PROJECT)</div>
+                    <div class="badge" onclick="copyBadge('version', event)">![Version](https://img.shields.io/pypi/v/PROJECT)</div>
+                    <div class="badge" onclick="copyBadge('downloads', event)">![Downloads](https://img.shields.io/pypi/dm/PROJECT)</div>
+                    <div class="badge" onclick="copyBadge('python', event)">![Python](https://img.shields.io/pypi/pyversions/PROJECT)</div>
                 </div>
 
                 <div class="section-title">Build & Quality</div>
                 <div class="badge-grid">
-                    <div class="badge" onclick="copyBadge('build')">![Build](https://github.com/USER/REPO/actions/workflows/ci.yml/badge.svg)</div>
-                    <div class="badge" onclick="copyBadge('coverage')">![Coverage](https://codecov.io/gh/USER/REPO/branch/main/graph/badge.svg)</div>
-                    <div class="badge" onclick="copyBadge('quality')">![Code Quality](https://img.shields.io/codacy/grade/HASH)</div>
+                    <div class="badge" onclick="copyBadge('build', event)">![Build](https://github.com/USER/REPO/actions/workflows/ci.yml/badge.svg)</div>
+                    <div class="badge" onclick="copyBadge('coverage', event)">![Coverage](https://codecov.io/gh/USER/REPO/branch/main/graph/badge.svg)</div>
+                    <div class="badge" onclick="copyBadge('quality', event)">![Code Quality](https://img.shields.io/codacy/grade/HASH)</div>
                 </div>
 
                 <div class="section-title">Community</div>
                 <div class="badge-grid">
-                    <div class="badge" onclick="copyBadge('stars')">![Stars](https://img.shields.io/github/stars/USER/REPO)</div>
-                    <div class="badge" onclick="copyBadge('forks')">![Forks](https://img.shields.io/github/forks/USER/REPO)</div>
-                    <div class="badge" onclick="copyBadge('issues')">![Issues](https://img.shields.io/github/issues/USER/REPO)</div>
-                    <div class="badge" onclick="copyBadge('license')">![License](https://img.shields.io/github/license/USER/REPO)</div>
+                    <div class="badge" onclick="copyBadge('stars', event)">![Stars](https://img.shields.io/github/stars/USER/REPO)</div>
+                    <div class="badge" onclick="copyBadge('forks', event)">![Forks](https://img.shields.io/github/forks/USER/REPO)</div>
+                    <div class="badge" onclick="copyBadge('issues', event)">![Issues](https://img.shields.io/github/issues/USER/REPO)</div>
+                    <div class="badge" onclick="copyBadge('license', event)">![License](https://img.shields.io/github/license/USER/REPO)</div>
                 </div>
 
                 <div class="section-title">Custom</div>
                 <div class="badge-grid">
-                    <div class="badge" onclick="copyBadge('mcp')">![MCP](https://img.shields.io/badge/MCP-Compatible-blue)</div>
-                    <div class="badge" onclick="copyBadge('ai')">![AI Powered](https://img.shields.io/badge/AI-Powered-purple)</div>
-                    <div class="badge" onclick="copyBadge('claude')">![Claude](https://img.shields.io/badge/Claude-Ready-orange)</div>
+                    <div class="badge" onclick="copyBadge('mcp', event)">![MCP](https://img.shields.io/badge/MCP-Compatible-blue)</div>
+                    <div class="badge" onclick="copyBadge('ai', event)">![AI Powered](https://img.shields.io/badge/AI-Powered-purple)</div>
+                    <div class="badge" onclick="copyBadge('claude', event)">![Claude](https://img.shields.io/badge/Claude-Ready-orange)</div>
                 </div>
             </div>
         </div>
@@ -545,84 +548,84 @@ MIT
 
                 <ul class="checklist" id="checklist">
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Professional README</h4>
                             <p>Clear description, installation, usage examples, and screenshots</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>LICENSE file</h4>
                             <p>MIT, Apache 2.0, or appropriate open source license</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Contributing Guidelines</h4>
                             <p>CONTRIBUTING.md with PR process and code standards</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Code of Conduct</h4>
                             <p>CODE_OF_CONDUCT.md for community guidelines</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Issue Templates</h4>
                             <p>Bug report and feature request templates</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>PR Template</h4>
                             <p>Pull request template with checklist</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>CI/CD Pipeline</h4>
                             <p>GitHub Actions for tests, linting, and deployment</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Documentation</h4>
                             <p>API docs, tutorials, or wiki pages</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Package Publishing</h4>
                             <p>Published to PyPI, npm, or relevant package manager</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Demo/Screenshots</h4>
                             <p>GIFs, screenshots, or live demo showing the project</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Social Sharing</h4>
                             <p>Announced on Twitter/X, Reddit, Hacker News</p>
                         </div>
                     </li>
                     <li class="checklist-item">
-                        <div class="checklist-checkbox" onclick="toggleCheck(this)"></div>
+                        <div class="checklist-checkbox" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleCheck(this)"></div>
                         <div class="checklist-text">
                             <h4>Awesome List Submission</h4>
                             <p>Submit to relevant awesome-* lists</p>
@@ -680,7 +683,7 @@ Click a button above to generate marketing copy...
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
 
-            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
             document.getElementById('tab-' + tabId).classList.add('active');
         }
 
@@ -760,7 +763,7 @@ Made with love by [Your Name](https://github.com/yourusername)
         }
 
         // Badge Builder
-        async function copyBadge(type) {
+        async function copyBadge(type, event) {
             const badges = {
                 version: '![Version](https://img.shields.io/pypi/v/YOUR_PACKAGE)',
                 downloads: '![Downloads](https://img.shields.io/pypi/dm/YOUR_PACKAGE)',
@@ -776,7 +779,7 @@ Made with love by [Your Name](https://github.com/yourusername)
                 ai: '![AI Powered](https://img.shields.io/badge/AI-Powered-purple)',
                 claude: '![Claude](https://img.shields.io/badge/Claude-Ready-orange)'
             };
-            const btn = event.currentTarget;
+            const btn = event && event.currentTarget;
             try {
                 await navigator.clipboard.writeText(badges[type]);
                 flashButton(btn, 'Copied!');
@@ -788,6 +791,7 @@ Made with love by [Your Name](https://github.com/yourusername)
         // Checklist
         function toggleCheck(el) {
             el.classList.toggle('checked');
+            el.setAttribute('aria-checked', el.classList.contains('checked') ? 'true' : 'false');
             updateChecklistProgress();
         }
 
@@ -897,8 +901,93 @@ Try it out: [GitHub link]
             }
         }
 
+        // Keyboard navigation for checklist checkboxes
+        document.querySelectorAll('.checklist-checkbox').forEach(cb => {
+            cb.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleCheck(cb);
+                }
+            });
+        });
+
+        // --- localStorage persistence ---
+        const STORAGE_KEY = 'cc-github-toolkit';
+        let saveTimeout;
+
+        function debouncedSaveState() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveState, 400);
+        }
+
+        function saveState() {
+            const state = {
+                projectName: document.getElementById('project-name').value,
+                projectTagline: document.getElementById('project-tagline').value,
+                projectDesc: document.getElementById('project-desc').value,
+                projectInstall: document.getElementById('project-install').value,
+                projectTech: document.getElementById('project-tech').value,
+                projectFeatures: document.getElementById('project-features').value,
+                marketingName: document.getElementById('marketing-name').value,
+                marketingPitch: document.getElementById('marketing-pitch').value,
+                marketingAudience: document.getElementById('marketing-audience').value,
+                checklist: Array.from(document.querySelectorAll('.checklist-checkbox')).map(cb => cb.classList.contains('checked'))
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                console.warn('Failed to save state:', e);
+                const msg = e.name === 'QuotaExceededError' ? 'Storage full - changes not saved' : 'Save failed';
+                const banner = document.createElement('div');
+                banner.textContent = msg;
+                banner.style.cssText = 'position:fixed;top:12px;right:12px;padding:8px 16px;background:#da3633;color:#fff;border-radius:6px;font-size:0.85rem;z-index:9999;';
+                document.body.appendChild(banner);
+                setTimeout(() => banner.remove(), 3000);
+            }
+        }
+
+        function restoreState() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            try {
+                const state = JSON.parse(raw);
+                if (state.projectName) document.getElementById('project-name').value = state.projectName;
+                if (state.projectTagline) document.getElementById('project-tagline').value = state.projectTagline;
+                if (state.projectDesc) document.getElementById('project-desc').value = state.projectDesc;
+                if (state.projectInstall) document.getElementById('project-install').value = state.projectInstall;
+                if (state.projectTech) document.getElementById('project-tech').value = state.projectTech;
+                if (state.projectFeatures) document.getElementById('project-features').value = state.projectFeatures;
+                if (state.marketingName) document.getElementById('marketing-name').value = state.marketingName;
+                if (state.marketingPitch) document.getElementById('marketing-pitch').value = state.marketingPitch;
+                if (state.marketingAudience) document.getElementById('marketing-audience').value = state.marketingAudience;
+                if (Array.isArray(state.checklist)) {
+                    document.querySelectorAll('.checklist-checkbox').forEach((cb, i) => {
+                        if (state.checklist[i]) {
+                            cb.classList.add('checked');
+                            cb.setAttribute('aria-checked', 'true');
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to restore saved state:', e);
+            }
+        }
+
+        // Attach debounced save to all form inputs
+        document.querySelectorAll('.form-group input, .form-group textarea').forEach(el => {
+            el.addEventListener('input', debouncedSaveState);
+        });
+
+        // Save on checklist toggle too (patch toggleCheck)
+        const _originalToggleCheck = toggleCheck;
+        toggleCheck = function(el) {
+            _originalToggleCheck(el);
+            debouncedSaveState();
+        };
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            restoreState();
             generateReadme();
             updateChecklistProgress();
         });

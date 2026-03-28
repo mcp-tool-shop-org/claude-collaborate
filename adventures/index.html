@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self';">
     <title>Claude Creative Lab</title>
+    <link rel="stylesheet" href="../collaborate-base.css">
     <style>
         :root {
             --bg-dark: #0a0a1a;
@@ -470,10 +472,10 @@
             height: 8px;
             background: var(--accent-5);
             border-radius: 50%;
-            animation: pulse 1.5s ease infinite;
+            animation: activityPulse 1.5s ease infinite;
         }
 
-        @keyframes pulse {
+        @keyframes activityPulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
         }
@@ -539,6 +541,7 @@
     </style>
 </head>
 <body>
+    <noscript><p style="color:#e0e0e0;text-align:center;padding:40px;font-family:system-ui">This tool requires JavaScript to run.</p></noscript>
     <div class="bg-animation"></div>
 
     <header>
@@ -696,11 +699,20 @@
             const swatch = document.createElement('div');
             swatch.className = 'color-swatch' + (i === 0 ? ' active' : '');
             swatch.style.background = color;
+            swatch.setAttribute('role', 'button');
+            swatch.setAttribute('tabindex', '0');
+            swatch.setAttribute('aria-label', 'Color ' + color);
             swatch.addEventListener('click', () => {
                 document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
                 swatch.classList.add('active');
                 currentColor = color;
                 logActivity(`Selected color ${color}`);
+            });
+            swatch.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    swatch.click();
+                }
             });
             palette.appendChild(swatch);
         });
@@ -730,7 +742,7 @@
         let audioCtx = null;
 
         function playTone(freq, pad) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!audioCtx) audioCtx = new AudioContext();
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -768,8 +780,9 @@
         const pCtx = particleCanvas.getContext('2d');
         let particles = [];
         let particleMode = 'stars';
-        const MAX_PARTICLES = 300;
+        const MAX_PARTICLES = 200;
         let animationRunning = false;
+        let animationPaused = false;
 
         function resizeParticleCanvas() {
             particleCanvas.width = particleCanvas.offsetWidth;
@@ -858,6 +871,11 @@
         });
 
         function animateParticles() {
+            if (animationPaused) {
+                // Keep the flag so we resume when tab becomes visible
+                return;
+            }
+
             pCtx.fillStyle = 'rgba(0,0,0,0.15)';
             pCtx.fillRect(0, 0, particleCanvas.width, particleCanvas.height);
             pCtx.globalAlpha = 1;
@@ -873,6 +891,18 @@
             }
             requestAnimationFrame(animateParticles);
         }
+
+        // Page Visibility API — pause animation when tab is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                animationPaused = true;
+            } else {
+                animationPaused = false;
+                if (animationRunning && particles.length > 0) {
+                    requestAnimationFrame(animateParticles);
+                }
+            }
+        });
 
         // ========== STORY BUILDER ==========
         const storyCanvas = document.getElementById('story-canvas');
@@ -946,7 +976,7 @@
             patternFeedback.textContent = '';
 
             // Generate choices
-            patternChoices.innerHTML = '';
+            patternChoices.textContent = '';
             const choiceSet = new Set([chosen.answer]);
             while (choiceSet.size < 4) {
                 choiceSet.add(shapes[Math.floor(Math.random() * shapes.length)]);

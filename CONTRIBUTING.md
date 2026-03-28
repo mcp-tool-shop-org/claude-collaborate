@@ -109,6 +109,12 @@ Run tests with:
 python -m pytest tests/
 ```
 
+Or use the Makefile to run lint, typecheck, and tests together:
+
+```bash
+make verify
+```
+
 ### Manual Testing Checklist
 
 - [ ] All interfaces load without errors
@@ -161,9 +167,9 @@ ws.onmessage = (event) => {
 
 ```python
 # Server-side (ws_bridge.py)
-async def handle_message(websocket, message):
+async def handle_message(ws: web.WebSocketResponse, data: dict):
     # Process message
-    await websocket.send(json.dumps(response))
+    await ws.send_json(response)
 ```
 
 ### Styling Consistency
@@ -207,12 +213,8 @@ The application can be deployed to various platforms:
 python server.py
 ```
 
-### Production Deployment
-- Use production WSGI server (gunicorn, uvicorn)
-- Configure reverse proxy (nginx)
-- Use wss:// for WebSocket connections
-- Set up SSL/TLS certificates
-- Configure environment variables
+### A Note on Deployment
+Claude Collaborate is a **local-first tool** designed for localhost use with Claude Code. Production deployment is not a supported use case, but if you experiment with it, consider a production WSGI server and reverse proxy.
 
 ## Documentation
 
@@ -224,4 +226,4 @@ When adding features:
 
 ## Questions?
 
-Open an issue or start a discussion in the [MCP Tool Shop](https://github.com/mcp-tool-shop) organization.
+Open an issue or start a discussion in the [MCP Tool Shop](https://github.com/mcp-tool-shop-org) organization.

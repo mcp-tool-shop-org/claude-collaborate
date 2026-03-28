@@ -23,7 +23,7 @@
 
 ## B. Error Handling
 
-- [x] `[all]` Errors follow the Structured Error Shape: `code`, `message`, `hint`, `cause?`, `retryable?` (2026-02-27) — server returns JSON error responses with status codes
+- [ ] `[all]` Errors follow the Structured Error Shape: `code`, `message`, `hint`, `cause?`, `retryable?` — TODO: Errors use simple {error} shape, not structured code/message/hint/cause/retryable
 - [ ] `[cli]` SKIP: not a CLI tool
 - [ ] `[cli]` SKIP: not a CLI tool
 - [ ] `[mcp]` SKIP: not an MCP server
@@ -45,8 +45,8 @@
 
 - [x] `[all]` `verify` script exists (test + build + smoke in one command) (2026-02-27)
 - [x] `[all]` Version in manifest matches git tag (2026-02-27)
-- [x] `[all]` Dependency scanning runs in CI (ecosystem-appropriate) (2026-02-27)
-- [x] `[all]` Automated dependency update mechanism exists (2026-02-27)
+- [x] `[all]` Dependency scanning runs in CI (ecosystem-appropriate) — pip-audit added in v1.0.5 (2026-03-28)
+- [ ] `[all]` Automated dependency update mechanism exists — TODO: Add Dependabot config
 - [ ] `[npm]` SKIP: Python project
 - [ ] `[npm]` SKIP: Python project
 - [ ] `[npm]` SKIP: Python project

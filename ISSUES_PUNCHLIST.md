@@ -4,9 +4,10 @@ One issue per bullet. Each includes acceptance criteria inline.
 
 ## P0 — Must-fix (throughput correctness)
 
-### Issue: Add file I/O locking around JSONL read+clear operations
-**Priority:** P0  
+### ~~Issue: Add file I/O locking around JSONL read+clear operations~~ (RESOLVED in v1.0.4)
+**Priority:** P0
 **Area:** ws_bridge.py file bridge
+**Status:** Resolved in v1.0.4 — asyncio.Lock added to prevent message file race conditions.
 
 **Problem:** `get_messages()` / `get_claude_responses()` read the JSONL file and then immediately clear it. Concurrent writers (WebSocket handler, HTTP endpoint, or external Claude process) can interleave writes and cause lost messages or corrupt reads.
 
@@ -79,9 +80,10 @@ One issue per bullet. Each includes acceptance criteria inline.
 
 ---
 
-### Issue: Avoid storing duplicate message state (remove or cap message_queue)
-**Priority:** P1  
+### ~~Issue: Avoid storing duplicate message state (remove or cap message_queue)~~ (RESOLVED in v1.0.4)
+**Priority:** P1
 **Area:** memory/perf
+**Status:** Resolved in v1.0.4 — `message_queue` removed from the codebase.
 
 **Problem:** `message_queue` duplicates what is already in the file but is never consumed in this script, increasing memory footprint.
 

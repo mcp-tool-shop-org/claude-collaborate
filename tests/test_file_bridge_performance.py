@@ -4,7 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 
-import pytest
+from conftest import CountingLock
 
 import ws_bridge
 
@@ -80,7 +80,6 @@ def test_rotate_file_nonexistent_file(tmp_path: Path):
 # =============================================================================
 
 
-@pytest.mark.asyncio
 async def test_concurrent_message_writes_use_lock(tmp_path: Path, monkeypatch):
     """P0: Concurrent message writes are serialized by lock."""
     msg_file = tmp_path / "messages.jsonl"
@@ -88,24 +87,9 @@ async def test_concurrent_message_writes_use_lock(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(ws_bridge, "MESSAGE_FILE", msg_file)
     monkeypatch.setattr(ws_bridge, "MAX_FILE_SIZE_BYTES", 10 * 1024 * 1024)
 
-    # Track lock acquisitions
-    lock_acquired_count = {"n": 0}
-
-    class CountingLock:
-        def __init__(self, lock):
-            self._lock = lock
-
-        async def __aenter__(self):
-            await self._lock.acquire()
-            lock_acquired_count["n"] += 1
-            return self
-
-        async def __aexit__(self, *args):
-            self._lock.release()
-
-    # Monkeypatch the lock to track usage
-    new_lock = asyncio.Lock()
-    monkeypatch.setattr(ws_bridge, "_message_file_lock", CountingLock(new_lock))
+    # Track lock acquisitions using shared CountingLock
+    counting_lock = CountingLock(asyncio.Lock())
+    monkeypatch.setattr(ws_bridge, "_message_file_lock", counting_lock)
 
     # Create mock WebSocket
     class MockWS:
@@ -122,39 +106,24 @@ async def test_concurrent_message_writes_use_lock(tmp_path: Path, monkeypatch):
     await asyncio.gather(*tasks)
 
     # Verify lock was acquired for each write
-    assert lock_acquired_count["n"] == 5
+    assert counting_lock.count == 5
 
 
-@pytest.mark.asyncio
 async def test_concurrent_response_reads_use_lock(tmp_path: Path, monkeypatch):
     """P0: Concurrent response reads are serialized by lock."""
     resp_file = tmp_path / "responses.jsonl"
     resp_file.write_text('{"type":"test"}\n', encoding="utf-8")
     monkeypatch.setattr(ws_bridge, "CLAUDE_RESPONSE_FILE", resp_file)
 
-    lock_acquired_count = {"n": 0}
-
-    class CountingLock:
-        def __init__(self, lock):
-            self._lock = lock
-
-        async def __aenter__(self):
-            await self._lock.acquire()
-            lock_acquired_count["n"] += 1
-            return self
-
-        async def __aexit__(self, *args):
-            self._lock.release()
-
-    new_lock = asyncio.Lock()
-    monkeypatch.setattr(ws_bridge, "_response_file_lock", CountingLock(new_lock))
+    counting_lock = CountingLock(asyncio.Lock())
+    monkeypatch.setattr(ws_bridge, "_response_file_lock", counting_lock)
 
     # Run multiple reads concurrently
     tasks = [ws_bridge.get_claude_responses() for _ in range(10)]
     await asyncio.gather(*tasks)
 
     # Each call should have acquired the lock
-    assert lock_acquired_count["n"] == 10
+    assert counting_lock.count == 10
 
 
 # =============================================================================
@@ -162,7 +131,6 @@ async def test_concurrent_response_reads_use_lock(tmp_path: Path, monkeypatch):
 # =============================================================================
 
 
-@pytest.mark.asyncio
 async def test_get_claude_responses_reads_all_lines_and_clears(tmp_path: Path, monkeypatch):
     resp_file = tmp_path / "claude_responses.jsonl"
     monkeypatch.setattr(ws_bridge, "CLAUDE_RESPONSE_FILE", resp_file)
@@ -181,7 +149,6 @@ async def test_get_claude_responses_reads_all_lines_and_clears(tmp_path: Path, m
     assert resp_file.read_text(encoding="utf-8") == ""
 
 
-@pytest.mark.asyncio
 async def test_get_messages_reads_all_lines_and_clears(tmp_path: Path, monkeypatch):
     msg_file = tmp_path / "messages.jsonl"
     monkeypatch.setattr(ws_bridge, "MESSAGE_FILE", msg_file)

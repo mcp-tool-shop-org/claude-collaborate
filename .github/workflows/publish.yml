@@ -34,8 +34,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install aiohttp
 
+      - name: Run checks
+        run: |
+          pip install -r requirements-dev.txt
+          ruff check server.py ws_bridge.py tests/
+          mypy server.py ws_bridge.py --ignore-missing-imports
+          pytest tests/ -v
+
       - name: Validate Structure
         run: |
+          set -e
           echo "Validating Claude Collaborate structure..."
           test -f index.html && echo "  ✓ index.html"
           test -f server.py && echo "  ✓ server.py"
@@ -44,6 +52,10 @@ jobs:
           test -f chess.html && echo "  ✓ chess.html"
           test -f capture-viewer.html && echo "  ✓ capture-viewer.html"
           test -f github-toolkit.html && echo "  ✓ github-toolkit.html"
+          test -f ws_bridge.py && echo "  ✓ ws_bridge.py"
+          test -f template.html && echo "  ✓ template.html"
+          test -f environments.json && echo "  ✓ environments.json"
+          test -f collaborate-base.css && echo "  ✓ collaborate-base.css"
           echo "All required files present!"
 
       - name: Create Release Package
@@ -59,8 +71,15 @@ jobs:
             --exclude='*.jsonl' \
             *.html \
             *.py \
+            *.css \
+            *.json \
             adventures/ \
+            requirements.txt \
+            llms.txt \
             README.md \
+            README.*.md \
+            CHANGELOG.md \
+            SECURITY.md \
             LICENSE
 
           echo "Created dist/claude-collaborate-${VERSION}.tar.gz"

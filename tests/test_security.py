@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-from aiohttp.test_utils import TestClient, TestServer
-
 import server
 import ws_bridge
 
@@ -44,11 +41,7 @@ def test_ws_bridge_app_has_client_max_size():
     assert app._client_max_size <= 10 * 1024 * 1024
 
 
-@pytest.fixture
-async def server_client():
-    app = server.create_app()
-    async with TestClient(TestServer(app)) as c:
-        yield c
+## server_client fixture is provided by conftest.py
 
 
 async def test_oversized_body_rejected(server_client):

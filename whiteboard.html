@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self';">
     <title>Collaborative Whiteboard</title>
+    <link rel="stylesheet" href="collaborate-base.css">
     <style>
         :root {
             --bg-dark: #1a1a2e;
@@ -341,6 +343,7 @@
             cursor: move;
             font-size: 0.9rem;
             line-height: 1.4;
+            touch-action: none; /* prevent scroll while dragging on touch */
         }
 
         .sticky-note.yellow { background: #fef3c7; color: #92400e; }
@@ -380,10 +383,115 @@
             border-radius: 8px;
             border: 1px solid var(--border);
         }
+
+        /* Save status indicator */
+        .save-status {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            padding: 8px 14px;
+            background: var(--bg-toolbar);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        .save-status.visible {
+            opacity: 1;
+        }
+
+        /* File actions toolbar */
+        .file-toolbar {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            padding: 6px 10px;
+            background: var(--bg-toolbar);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .file-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.08);
+            color: var(--text-dim);
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .file-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: var(--text);
+        }
+
+        .file-btn.danger:hover {
+            background: rgba(255,80,80,0.25);
+            color: #ff6b6b;
+        }
+
+        /* Fill toggle */
+        .fill-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .fill-toggle input[type="checkbox"] {
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .fill-toggle.active {
+            color: var(--accent);
+        }
+
+        /* Selection highlight */
+        .selection-highlight {
+            position: absolute;
+            border: 2px dashed var(--accent);
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* Hidden file input */
+        #import-json-input {
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <noscript><p style="color:#e0e0e0;text-align:center;padding:40px;font-family:system-ui">This tool requires JavaScript to run.</p></noscript>
     <div class="board-title">Collaborative Whiteboard</div>
+    <div class="save-status" id="save-status">Saved</div>
+
+    <!-- File Actions Toolbar -->
+    <div class="file-toolbar">
+        <button class="file-btn" id="export-png-btn" title="Export as PNG">Export PNG</button>
+        <button class="file-btn" id="export-json-btn" title="Export board as JSON">Export JSON</button>
+        <button class="file-btn" id="import-json-btn" title="Import board from JSON">Import JSON</button>
+        <input type="file" id="import-json-input" accept=".json">
+        <button class="file-btn danger" id="clear-new-btn" title="Clear board and start fresh">Clear &amp; New</button>
+    </div>
 
     <div class="canvas-container">
         <canvas id="whiteboard"></canvas>
@@ -398,20 +506,20 @@
         </div>
 
         <div class="tool-group color-picker">
-            <div class="color-swatch active" data-color="#ffffff" style="background:#ffffff"></div>
-            <div class="color-swatch" data-color="#ff6b6b" style="background:#ff6b6b"></div>
-            <div class="color-swatch" data-color="#feca57" style="background:#feca57"></div>
-            <div class="color-swatch" data-color="#48dbfb" style="background:#48dbfb"></div>
-            <div class="color-swatch" data-color="#1dd1a1" style="background:#1dd1a1"></div>
-            <div class="color-swatch" data-color="#ff9ff3" style="background:#ff9ff3"></div>
-            <div class="color-swatch" data-color="#5f27cd" style="background:#5f27cd"></div>
+            <div class="color-swatch active" data-color="#ffffff" style="background:#ffffff" role="button" tabindex="0" aria-label="White color"></div>
+            <div class="color-swatch" data-color="#ff6b6b" style="background:#ff6b6b" role="button" tabindex="0" aria-label="Red color"></div>
+            <div class="color-swatch" data-color="#feca57" style="background:#feca57" role="button" tabindex="0" aria-label="Yellow color"></div>
+            <div class="color-swatch" data-color="#48dbfb" style="background:#48dbfb" role="button" tabindex="0" aria-label="Blue color"></div>
+            <div class="color-swatch" data-color="#1dd1a1" style="background:#1dd1a1" role="button" tabindex="0" aria-label="Green color"></div>
+            <div class="color-swatch" data-color="#ff9ff3" style="background:#ff9ff3" role="button" tabindex="0" aria-label="Pink color"></div>
+            <div class="color-swatch" data-color="#5f27cd" style="background:#5f27cd" role="button" tabindex="0" aria-label="Purple color"></div>
         </div>
 
         <div class="tool-group size-control">
             <div class="size-preview">
                 <div class="size-dot" id="size-dot"></div>
             </div>
-            <input type="range" id="brush-size" min="1" max="30" value="4">
+            <input type="range" id="brush-size" min="1" max="30" value="4" aria-label="Brush size">
         </div>
 
         <div class="tool-group">
@@ -423,12 +531,15 @@
 
     <!-- Side Shapes Panel -->
     <div class="shapes-panel">
-        <button class="shape-btn" data-shape="line" title="Line">📏</button>
-        <button class="shape-btn" data-shape="rect" title="Rectangle">⬜</button>
-        <button class="shape-btn" data-shape="circle" title="Circle">⭕</button>
-        <button class="shape-btn" data-shape="arrow" title="Arrow">➡️</button>
-        <button class="shape-btn" data-shape="text" title="Text">📝</button>
-        <button class="shape-btn" data-shape="sticky" title="Sticky Note">📌</button>
+        <button class="shape-btn" data-shape="line" title="Line" aria-label="Line">📏</button>
+        <button class="shape-btn" data-shape="rect" title="Rectangle" aria-label="Rectangle">⬜</button>
+        <button class="shape-btn" data-shape="circle" title="Circle" aria-label="Circle">⭕</button>
+        <button class="shape-btn" data-shape="arrow" title="Arrow" aria-label="Arrow">➡️</button>
+        <button class="shape-btn" data-shape="text" title="Text" aria-label="Text">📝</button>
+        <button class="shape-btn" data-shape="sticky" title="Sticky Note" aria-label="Sticky Note">📌</button>
+        <label class="fill-toggle" id="fill-toggle" title="Fill shapes with color">
+            <input type="checkbox" id="fill-checkbox"> Fill
+        </label>
     </div>
 
     <!-- Bottom Info -->
@@ -470,6 +581,7 @@
     <script>
         const canvas = document.getElementById('whiteboard');
         const ctx = canvas.getContext('2d');
+        const STORAGE_KEY = 'whiteboard-state';
 
         // State
         let isDrawing = false;
@@ -484,7 +596,179 @@
         let startX, startY;
         let shapeMode = null;
         let textPosition = null;
-        // Resize canvas
+        let saveStatusTimer = null;
+        let fillShapes = false;
+        let selectedStrokeIndex = -1;
+        let selectionEl = null;
+
+        // Fill toggle
+        const fillCheckbox = document.getElementById('fill-checkbox');
+        const fillToggleLabel = document.getElementById('fill-toggle');
+        fillCheckbox.addEventListener('change', () => {
+            fillShapes = fillCheckbox.checked;
+            fillToggleLabel.classList.toggle('active', fillShapes);
+        });
+
+        // ── Save / Load (localStorage) ──────────────────────────────
+
+        function getStickyNoteData() {
+            const notes = [];
+            document.querySelectorAll('.sticky-note').forEach(note => {
+                const colorClass = stickyColors.find(c => note.classList.contains(c)) || 'yellow';
+                // Get text content without the delete button
+                const clone = note.cloneNode(true);
+                const btn = clone.querySelector('.delete-note');
+                if (btn) btn.remove();
+                notes.push({
+                    left: note.style.left,
+                    top: note.style.top,
+                    color: colorClass,
+                    text: clone.textContent.trim()
+                });
+            });
+            return notes;
+        }
+
+        function buildState() {
+            return {
+                strokes,
+                stickyNotes: getStickyNoteData(),
+                currentColor,
+                brushSize
+            };
+        }
+
+        function autoSave() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(buildState()));
+                showSaveStatus('Saved');
+            } catch (_) {
+                showSaveStatus('Save failed');
+            }
+        }
+
+        function showSaveStatus(message) {
+            const el = document.getElementById('save-status');
+            el.textContent = message || 'Saved';
+            el.classList.add('visible');
+            clearTimeout(saveStatusTimer);
+            saveStatusTimer = setTimeout(() => el.classList.remove('visible'), 1200);
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const state = JSON.parse(raw);
+
+                if (Array.isArray(state.strokes)) strokes = state.strokes;
+                if (typeof state.currentColor === 'string') {
+                    currentColor = state.currentColor;
+                    document.querySelectorAll('.color-swatch').forEach(s => {
+                        s.classList.toggle('active', s.dataset.color === currentColor);
+                    });
+                }
+                if (typeof state.brushSize === 'number') {
+                    brushSize = state.brushSize;
+                    document.getElementById('brush-size').value = brushSize;
+                    updateSizeDot();
+                }
+                if (Array.isArray(state.stickyNotes)) {
+                    state.stickyNotes.forEach(n => {
+                        const x = parseInt(n.left, 10) || 100;
+                        const y = parseInt(n.top, 10) || 100;
+                        addStickyNote(x, y, n.color, n.text);
+                    });
+                }
+                redraw();
+                updateStrokeCount();
+            } catch (_) { /* corrupted data — start fresh */ }
+        }
+
+        // ── Export PNG ──────────────────────────────────────────────
+
+        function exportPNG() {
+            // Draw at 1x onto a temp canvas so the export is clean
+            const tmp = document.createElement('canvas');
+            tmp.width = canvas.width;
+            tmp.height = canvas.height;
+            const tCtx = tmp.getContext('2d');
+            // Fill with background color so export isn't transparent
+            tCtx.fillStyle = '#1a1a2e';
+            tCtx.fillRect(0, 0, tmp.width, tmp.height);
+            tCtx.drawImage(canvas, 0, 0);
+
+            tmp.toBlob(blob => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `whiteboard-${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+
+        // ── Export / Import JSON ────────────────────────────────────
+
+        function exportJSON() {
+            const state = buildState();
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `whiteboard-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importJSON(file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const state = JSON.parse(reader.result);
+                    if (!Array.isArray(state.strokes)) throw new Error('Invalid file');
+                    // Clear existing
+                    strokes = state.strokes;
+                    redoStack = [];
+                    stickyCleanupFns.forEach(fn => fn());
+                    stickyCleanupFns = [];
+                    document.querySelectorAll('.sticky-note').forEach(n => n.remove());
+
+                    if (typeof state.currentColor === 'string') {
+                        currentColor = state.currentColor;
+                        document.querySelectorAll('.color-swatch').forEach(s => {
+                            s.classList.toggle('active', s.dataset.color === currentColor);
+                        });
+                    }
+                    if (typeof state.brushSize === 'number') {
+                        brushSize = state.brushSize;
+                        document.getElementById('brush-size').value = brushSize;
+                        updateSizeDot();
+                    }
+                    if (Array.isArray(state.stickyNotes)) {
+                        state.stickyNotes.forEach(n => {
+                            const x = parseInt(n.left, 10) || 100;
+                            const y = parseInt(n.top, 10) || 100;
+                            addStickyNote(x, y, n.color, n.text);
+                        });
+                    }
+                    redraw();
+                    updateStrokeCount();
+                    autoSave();
+                } catch (_) {
+                    alert('Could not read whiteboard file. Make sure it is a valid JSON export.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ── Resize canvas ───────────────────────────────────────────
+
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -493,12 +777,35 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Drawing functions
-        function startDrawing(e) {
+        // ── Coordinate helpers (zoom-aware) ─────────────────────────
+
+        function canvasCoords(e) {
             const rect = canvas.getBoundingClientRect();
+            return {
+                x: (e.clientX - rect.left) / zoom,
+                y: (e.clientY - rect.top) / zoom
+            };
+        }
+
+        // ── Drawing functions ───────────────────────────────────────
+
+        function startDrawing(e) {
+            const { x, y } = canvasCoords(e);
+
+            // Select tool — hit test on click
+            if (currentTool === 'select') {
+                const hitIndex = hitTestStroke(x, y);
+                if (hitIndex >= 0) {
+                    selectedStrokeIndex = hitIndex;
+                    showSelectionHighlight(hitIndex);
+                } else {
+                    deselectStroke();
+                }
+                return;
+            }
 
             if (shapeMode === 'text') {
-                textPosition = { x: (e.clientX - rect.left) / zoom, y: (e.clientY - rect.top) / zoom };
+                textPosition = { x, y };
                 document.getElementById('text-modal').classList.add('active');
                 document.getElementById('text-input').focus();
                 return;
@@ -510,24 +817,25 @@
             }
 
             isDrawing = true;
-            startX = (e.clientX - rect.left) / zoom;
-            startY = (e.clientY - rect.top) / zoom;
+            startX = x;
+            startY = y;
             currentStroke = [{ x: startX, y: startY }];
 
             if (currentTool === 'pen' && !shapeMode) {
+                ctx.save();
+                ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
                 ctx.beginPath();
                 ctx.moveTo(startX, startY);
                 ctx.strokeStyle = currentColor;
                 ctx.lineWidth = brushSize;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
+                ctx.restore();
             }
         }
 
         function draw(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / zoom;
-            const y = (e.clientY - rect.top) / zoom;
+            const { x, y } = canvasCoords(e);
 
             document.getElementById('cursor-pos').textContent = `${Math.round(x)}, ${Math.round(y)}`;
 
@@ -535,6 +843,8 @@
 
             if (shapeMode) {
                 redraw();
+                ctx.save();
+                ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
                 ctx.strokeStyle = currentColor;
                 ctx.lineWidth = brushSize;
                 ctx.lineCap = 'round';
@@ -552,21 +862,41 @@
                     }
                     ctx.stroke();
                 } else if (shapeMode === 'rect') {
+                    if (fillShapes) {
+                        ctx.fillStyle = currentColor;
+                        ctx.fillRect(startX, startY, x - startX, y - startY);
+                    }
                     ctx.strokeRect(startX, startY, x - startX, y - startY);
                 } else if (shapeMode === 'circle') {
                     const radius = Math.hypot(x - startX, y - startY);
                     ctx.beginPath();
                     ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+                    if (fillShapes) {
+                        ctx.fillStyle = currentColor;
+                        ctx.fill();
+                    }
                     ctx.stroke();
                 } else if (shapeMode === 'arrow') {
                     drawArrow(startX, startY, x, y);
                 }
+                ctx.restore();
             } else if (currentTool === 'pen') {
+                ctx.save();
+                ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = brushSize;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                const prev = currentStroke[currentStroke.length - 1];
+                ctx.moveTo(prev.x, prev.y);
                 ctx.lineTo(x, y);
                 ctx.stroke();
+                ctx.restore();
                 currentStroke.push({ x, y });
             } else if (currentTool === 'eraser') {
                 ctx.save();
+                ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
                 ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
                 ctx.arc(x, y, brushSize * 2, 0, Math.PI * 2);
@@ -580,9 +910,7 @@
             if (!isDrawing) return;
             isDrawing = false;
 
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / zoom;
-            const y = (e.clientY - rect.top) / zoom;
+            const { x, y } = canvasCoords(e);
 
             if (shapeMode) {
                 let endX = x, endY = y;
@@ -598,7 +926,8 @@
                     startX, startY,
                     endX, endY,
                     color: currentColor,
-                    size: brushSize
+                    size: brushSize,
+                    filled: fillShapes
                 });
             } else if (currentTool === 'pen' && currentStroke.length > 1) {
                 strokes.push({
@@ -622,6 +951,7 @@
             currentStroke = [];
             redoStack = [];
             updateStrokeCount();
+            autoSave();
         }
 
         function drawArrow(fromX, fromY, toX, toY) {
@@ -641,8 +971,15 @@
             ctx.stroke();
         }
 
+        // ── Redraw (zoom via canvas context transform) ──────────────
+
         function redraw() {
+            // Reset to identity, clear entire physical canvas
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Apply zoom transform — all subsequent drawing is in "world" coords
+            ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
 
             strokes.forEach(stroke => {
                 ctx.strokeStyle = stroke.color;
@@ -661,13 +998,23 @@
                     ctx.lineTo(stroke.endX, stroke.endY);
                     ctx.stroke();
                 } else if (stroke.type === 'rect') {
+                    if (stroke.filled) {
+                        ctx.fillStyle = stroke.color;
+                        ctx.fillRect(stroke.startX, stroke.startY, stroke.endX - stroke.startX, stroke.endY - stroke.startY);
+                    }
                     ctx.strokeRect(stroke.startX, stroke.startY, stroke.endX - stroke.startX, stroke.endY - stroke.startY);
                 } else if (stroke.type === 'circle') {
                     const radius = Math.hypot(stroke.endX - stroke.startX, stroke.endY - stroke.startY);
                     ctx.beginPath();
                     ctx.arc(stroke.startX, stroke.startY, radius, 0, Math.PI * 2);
+                    if (stroke.filled) {
+                        ctx.fillStyle = stroke.color;
+                        ctx.fill();
+                    }
                     ctx.stroke();
                 } else if (stroke.type === 'arrow') {
+                    ctx.strokeStyle = stroke.color;
+                    ctx.lineWidth = stroke.size;
                     drawArrow(stroke.startX, stroke.startY, stroke.endX, stroke.endY);
                 } else if (stroke.type === 'eraser') {
                     ctx.save();
@@ -691,13 +1038,101 @@
                     ctx.fillText(stroke.text, stroke.x, stroke.y);
                 }
             });
+
+            // Reset transform so non-canvas UI isn't affected
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
         }
 
-        // Event listeners
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseleave', stopDrawing);
+        // ── Event listeners — pointer events ────────────────────────
+
+        canvas.addEventListener('pointerdown', startDrawing);
+        canvas.addEventListener('pointermove', draw);
+        canvas.addEventListener('pointerup', stopDrawing);
+        canvas.addEventListener('pointerleave', stopDrawing);
+
+        // ── Select tool helpers ──────────────────────────────────
+
+        function getStrokeBBox(stroke) {
+            if (stroke.type === 'pen' || stroke.type === 'eraser') {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                stroke.points.forEach(p => {
+                    if (p.x < minX) minX = p.x;
+                    if (p.y < minY) minY = p.y;
+                    if (p.x > maxX) maxX = p.x;
+                    if (p.y > maxY) maxY = p.y;
+                });
+                const pad = stroke.size || 2;
+                return { x: minX - pad, y: minY - pad, w: maxX - minX + pad * 2, h: maxY - minY + pad * 2 };
+            } else if (stroke.type === 'rect') {
+                const x = Math.min(stroke.startX, stroke.endX);
+                const y = Math.min(stroke.startY, stroke.endY);
+                return { x, y, w: Math.abs(stroke.endX - stroke.startX), h: Math.abs(stroke.endY - stroke.startY) };
+            } else if (stroke.type === 'circle') {
+                const r = Math.hypot(stroke.endX - stroke.startX, stroke.endY - stroke.startY);
+                return { x: stroke.startX - r, y: stroke.startY - r, w: r * 2, h: r * 2 };
+            } else if (stroke.type === 'line' || stroke.type === 'arrow') {
+                const x = Math.min(stroke.startX, stroke.endX);
+                const y = Math.min(stroke.startY, stroke.endY);
+                const pad = (stroke.size || 2) + 5;
+                return { x: x - pad, y: y - pad, w: Math.abs(stroke.endX - stroke.startX) + pad * 2, h: Math.abs(stroke.endY - stroke.startY) + pad * 2 };
+            } else if (stroke.type === 'text') {
+                const fontSize = stroke.size * 4;
+                const approxWidth = stroke.text.length * fontSize * 0.6;
+                return { x: stroke.x, y: stroke.y - fontSize, w: approxWidth, h: fontSize * 1.2 };
+            }
+            return null;
+        }
+
+        function hitTestStroke(x, y) {
+            // Check strokes in reverse order (topmost first)
+            for (let i = strokes.length - 1; i >= 0; i--) {
+                const bbox = getStrokeBBox(strokes[i]);
+                if (bbox && x >= bbox.x && x <= bbox.x + bbox.w && y >= bbox.y && y <= bbox.y + bbox.h) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function showSelectionHighlight(index) {
+            removeSelectionHighlight();
+            if (index < 0 || index >= strokes.length) return;
+            const bbox = getStrokeBBox(strokes[index]);
+            if (!bbox) return;
+
+            selectionEl = document.createElement('div');
+            selectionEl.className = 'selection-highlight';
+            selectionEl.style.left = (bbox.x * zoom) + 'px';
+            selectionEl.style.top = (bbox.y * zoom) + 'px';
+            selectionEl.style.width = (bbox.w * zoom) + 'px';
+            selectionEl.style.height = (bbox.h * zoom) + 'px';
+            document.querySelector('.canvas-container').appendChild(selectionEl);
+        }
+
+        function removeSelectionHighlight() {
+            if (selectionEl) {
+                selectionEl.remove();
+                selectionEl = null;
+            }
+        }
+
+        function deselectStroke() {
+            selectedStrokeIndex = -1;
+            removeSelectionHighlight();
+        }
+
+        // Handle delete/backspace for selected stroke
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.isContentEditable) return;
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedStrokeIndex >= 0) {
+                e.preventDefault();
+                redoStack.push(strokes.splice(selectedStrokeIndex, 1)[0]);
+                deselectStroke();
+                redraw();
+                updateStrokeCount();
+                autoSave();
+            }
+        });
 
         // Tool selection
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
@@ -707,6 +1142,10 @@
                 currentTool = btn.dataset.tool;
                 shapeMode = null;
                 document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+                if (currentTool !== 'select') {
+                    deselectStroke();
+                }
+                canvas.style.cursor = currentTool === 'select' ? 'default' : 'crosshair';
             });
         });
 
@@ -718,6 +1157,8 @@
                 btn.classList.add('active');
                 shapeMode = btn.dataset.shape;
                 currentTool = 'shape';
+                deselectStroke();
+                canvas.style.cursor = 'crosshair';
             });
         });
 
@@ -727,6 +1168,12 @@
                 document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
                 swatch.classList.add('active');
                 currentColor = swatch.dataset.color;
+            });
+            swatch.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    swatch.click();
+                }
             });
         });
 
@@ -748,6 +1195,7 @@
                 redoStack.push(strokes.pop());
                 redraw();
                 updateStrokeCount();
+                autoSave();
             }
         });
 
@@ -756,18 +1204,55 @@
                 strokes.push(redoStack.pop());
                 redraw();
                 updateStrokeCount();
+                autoSave();
             }
         });
 
-        // Clear
+        // Clear (original toolbar button — clears canvas only, keeps localStorage)
         document.getElementById('clear-btn').addEventListener('click', () => {
             if (confirm('Clear the entire whiteboard?')) {
                 strokes = [];
                 redoStack = [];
+                stickyCleanupFns.forEach(fn => fn());
+                stickyCleanupFns = [];
                 document.querySelectorAll('.sticky-note').forEach(n => n.remove());
                 redraw();
                 updateStrokeCount();
+                autoSave();
             }
+        });
+
+        // Clear & New (file toolbar — wipes localStorage too)
+        document.getElementById('clear-new-btn').addEventListener('click', () => {
+            if (confirm('This will erase all saved data and start a blank board. Continue?')) {
+                strokes = [];
+                redoStack = [];
+                stickyCleanupFns.forEach(fn => fn());
+                stickyCleanupFns = [];
+                document.querySelectorAll('.sticky-note').forEach(n => n.remove());
+                currentColor = '#ffffff';
+                brushSize = 4;
+                document.querySelectorAll('.color-swatch').forEach(s => {
+                    s.classList.toggle('active', s.dataset.color === '#ffffff');
+                });
+                document.getElementById('brush-size').value = 4;
+                updateSizeDot();
+                localStorage.removeItem(STORAGE_KEY);
+                redraw();
+                updateStrokeCount();
+            }
+        });
+
+        // File toolbar buttons
+        document.getElementById('export-png-btn').addEventListener('click', exportPNG);
+        document.getElementById('export-json-btn').addEventListener('click', exportJSON);
+        document.getElementById('import-json-btn').addEventListener('click', () => {
+            document.getElementById('import-json-input').click();
+        });
+        document.getElementById('import-json-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) importJSON(file);
+            e.target.value = ''; // allow re-importing same file
         });
 
         // Keyboard shortcuts
@@ -808,63 +1293,82 @@
                 });
                 redraw();
                 updateStrokeCount();
+                autoSave();
             }
             closeTextModal();
         }
 
-        // Sticky notes
+        // ── Sticky notes ────────────────────────────────────────────
+
         const stickyColors = ['yellow', 'pink', 'blue', 'green'];
         let stickyColorIndex = 0;
+        let stickyCleanupFns = [];
 
-        function addStickyNote(x, y) {
+        function addStickyNote(x, y, colorOverride, textOverride) {
+            const color = colorOverride || stickyColors[stickyColorIndex % stickyColors.length];
             const note = document.createElement('div');
-            note.className = `sticky-note ${stickyColors[stickyColorIndex % stickyColors.length]}`;
+            note.className = `sticky-note ${color}`;
             note.style.left = x + 'px';
             note.style.top = y + 'px';
             note.contentEditable = true;
-            note.textContent = 'Click to edit...';
+            note.textContent = textOverride || 'Click to edit...';
 
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-note';
-            deleteBtn.textContent = '×';
+            deleteBtn.textContent = '\u00d7';
             note.appendChild(deleteBtn);
 
             let isDragging = false;
             let offsetX, offsetY;
 
-            note.addEventListener('mousedown', (e) => {
+            note.addEventListener('pointerdown', (e) => {
                 if (e.target === deleteBtn) return;
                 isDragging = true;
+                note.setPointerCapture(e.pointerId);
                 offsetX = e.clientX - note.offsetLeft;
                 offsetY = e.clientY - note.offsetTop;
             });
 
-            const onMouseMove = (e) => {
+            const onPointerMove = (e) => {
                 if (isDragging) {
                     note.style.left = (e.clientX - offsetX) + 'px';
                     note.style.top = (e.clientY - offsetY) + 'px';
                 }
             };
 
-            const onMouseUp = () => {
-                isDragging = false;
+            const onPointerUp = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    autoSave();
+                }
             };
 
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
+            // Auto-save when sticky content changes
+            note.addEventListener('input', () => autoSave());
+
+            document.addEventListener('pointermove', onPointerMove);
+            document.addEventListener('pointerup', onPointerUp);
+
+            const cleanup = () => {
+                document.removeEventListener('pointermove', onPointerMove);
+                document.removeEventListener('pointerup', onPointerUp);
+            };
 
             deleteBtn.onclick = () => {
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
+                cleanup();
+                stickyCleanupFns = stickyCleanupFns.filter(fn => fn !== cleanup);
                 note.remove();
+                autoSave();
             };
 
+            stickyCleanupFns.push(cleanup);
             document.body.appendChild(note);
-            stickyColorIndex++;
+            if (!colorOverride) stickyColorIndex++;
             note.focus();
         }
 
-        // Zoom
+        // ── Zoom (canvas context transform — no CSS scale) ──────────
+
         document.getElementById('zoom-in').addEventListener('click', () => {
             zoom = Math.min(zoom + 0.25, 3);
             updateZoom();
@@ -882,15 +1386,18 @@
 
         function updateZoom() {
             document.getElementById('zoom-level').textContent = Math.round(zoom * 100) + '%';
-            canvas.style.transform = `scale(${zoom})`;
-            canvas.style.transformOrigin = 'center center';
+            // No CSS transform — zoom is applied via ctx.setTransform in redraw()
+            canvas.style.transform = '';
+            redraw();
         }
 
         function updateStrokeCount() {
             document.getElementById('stroke-count').textContent = `${strokes.length} strokes`;
         }
 
-        // Initial setup
+        // ── Initial setup: restore saved state ──────────────────────
+
+        loadState();
         updateStrokeCount();
     </script>
 </body>
