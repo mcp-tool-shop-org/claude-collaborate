@@ -26,7 +26,7 @@ CLAUDE_RESPONSE_FILE = Path(__file__).parent / "claude_responses.jsonl"
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 MAX_CLIENTS = 50
 
-connected_clients = set()
+connected_clients: set[web.WebSocketResponse] = set()
 
 # File I/O locks to prevent race conditions on read+clear operations
 _message_file_lock = asyncio.Lock()

@@ -82,7 +82,7 @@ async def adventures_static_handler(request: web.Request) -> web.StreamResponse:
     return web.Response(text="Not Found", status=404)
 
 
-async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
+async def websocket_handler(request: web.Request) -> web.WebSocketResponse | web.Response:
     """Handle WebSocket connections for real-time Claude communication."""
     if len(connected_ws_clients) >= MAX_WS_CLIENTS:
         return web.Response(text="Too many connections", status=503)
