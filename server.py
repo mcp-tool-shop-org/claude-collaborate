@@ -21,7 +21,7 @@ from pathlib import Path
 
 from aiohttp import WSMsgType, web
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 # Configure logging
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

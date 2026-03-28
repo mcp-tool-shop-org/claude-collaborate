@@ -5,6 +5,48 @@ All notable changes to Claude Collaborate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-03-27
+
+### Security
+- Fix directory traversal guard with proper path containment check
+- Restrict CORS from wildcard to localhost origin
+- Add 1MB message/body size limits to prevent DoS
+- Add 50-client WebSocket connection cap
+- Mask internal error details in API responses
+- Fix XSS vectors: innerHTML replaced with safe DOM APIs across all environments
+- Add postMessage source validation in code playground
+- Replace Blob URL with data URI to prevent sandbox origin escape
+- Remove allow-modals from code playground iframe sandbox
+- Add path traversal validation for capture viewer
+
+### Fixed
+- Runtime crash from undefined speakInput reference in main UI
+- Chess: castling rights now revoked when rook is captured
+- Chess: proper move disambiguation (only when ambiguous)
+- Chess: check/checkmate notation suffixes (+/#) added
+- Chess: undo now uses position snapshots instead of resetting game
+- Whiteboard: zoom coordinate compensation for CSS transform
+- Whiteboard: eraser strokes recorded for undo support
+- Whiteboard: shift-snap endpoints persisted correctly
+- WebSocket bridge: malformed JSONL lines skipped instead of aborting batch
+- WebSocket bridge: broadcast uses client snapshot to prevent mutation during iteration
+- Message file race condition prevented with asyncio lock
+
+### Added
+- 22 new tests: server handlers, ws_bridge handlers, security checks (35 total)
+- localStorage persistence for code playground editor state
+- Exponential backoff WebSocket reconnection (no give-up limit)
+- Touch/pointer event support for whiteboard, creative lab
+- Keyboard accessibility for environment switcher
+- Conversation panel capped at 200 messages
+- Particle system capped at 300 with idle animation pause
+- CI permissions block, Pages PR validation, release trigger fix
+
+### Changed
+- CONTRIBUTING.md corrected: URLs, port, framework name
+- CHANGELOG version table updated through v1.0.3
+- All timestamps now use UTC
+
 ## [1.0.3] - 2026-03-25
 
 ### Added
